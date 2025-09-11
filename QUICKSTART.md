@@ -9,12 +9,18 @@
 
 ## 🏃‍♂️ Getting Started (5 minutes)
 
-### Step 1: Setup OpenAI API Key
-1. Get your OpenAI API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+### Step 1: Setup Gemini API Key
+1. Get your Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. Edit `backend/.env` file:
 ```bash
-OPENAI_API_KEY=sk-your-actual-api-key-here
+GEMINI_API_KEY=your-actual-gemini-api-key-here
 ```
+
+**Why Gemini?**
+- ✅ **Free tier**: 15 requests per minute, 1500 requests per day
+- ✅ **Cost effective**: Much cheaper than OpenAI
+- ✅ **Great performance**: Excellent for code generation
+- ✅ **No credit card required** for getting started
 
 ### Step 2: Start Backend Server
 ```bash
@@ -55,9 +61,10 @@ npm run dev
 - Check backend is running on port 3001
 - Check CORS is enabled in backend/server.js
 
-**OpenAI API errors?**
+**Gemini API errors?**
 - Verify your API key is correct in backend/.env
-- Check you have sufficient OpenAI credits
+- Check you haven't exceeded the free tier limits
+- Make sure you're using the correct key from Google AI Studio
 
 **Dependency issues?**
 - Run `npm install` in both frontend and backend directories

@@ -1,15 +1,14 @@
 const express = require('express');
 const cors = require('cors');
-const { OpenAI } = require('openai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 // Middleware
 app.use(cors());
@@ -17,42 +16,68 @@ app.use(express.json({ limit: '10mb' }));
 
 // Health check endpoint
 app.get('/', (req, res) => {
-  res.json({ message: 'AI Avalanche Copilot Backend is running!' });
+  console.log('Health check endpoint hit');
+  res.json({ 
+    message: 'AI Avalanche Copilot Backend is running!',
+    timestamp: new Date().toISOString(),
+    endpoints: ['/api/generate', '/api/explain']
+  });
+});
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// Simple test endpoint for Gemini API
+app.get('/test', async (req, res) => {
+  try {
+    console.log('Testing Gemini API...');
+    const result = await model.generateContent('Say hello in one word');
+    const response = await result.response;
+    const text = response.text();
+    console.log('Gemini test successful:', text);
+    res.json({ success: true, text: text });
+  } catch (error) {
+    console.error('Gemini test failed:', error);
+    res.status(500).json({ error: error.message, details: error.toString() });
+  }
 });
 
 // Contract Generation endpoint
 app.post('/api/generate', async (req, res) => {
+  console.log('Generate endpoint hit');
+  
   try {
     const { prompt } = req.body;
+    console.log('Request body:', req.body);
 
     if (!prompt) {
+      console.log('No prompt provided');
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert Solidity smart contract developer for Avalanche blockchain. 
-          Generate secure, gas-efficient Solidity contracts using OpenZeppelin standards when applicable.
-          Always include proper comments and follow best practices.
-          For ERC-20 tokens, use OpenZeppelin's ERC20 implementation.
-          For NFTs, use ERC721 or ERC1155 standards.
-          Include necessary imports and pragma statements.
-          Make contracts deployment-ready for Avalanche C-Chain.`
-        },
-        {
-          role: "user",
-          content: `Generate a Solidity smart contract for: ${prompt}`
-        }
-      ],
-      max_tokens: 2000,
-      temperature: 0.3
-    });
+    console.log('Generating contract for:', prompt);
 
-    const contractCode = completion.choices[0].message.content;
+    const systemPrompt = `You are a Solidity smart contract expert. Generate a secure smart contract for Avalanche blockchain.
 
+Request: ${prompt}
+
+Include:
+- SPDX license and pragma
+- OpenZeppelin imports when needed  
+- Clear comments
+- Basic security practices
+
+Generate only Solidity code:`;
+
+    console.log('Calling Gemini API...');
+    const result = await model.generateContent(systemPrompt);
+    const response = await result.response;
+    const contractCode = response.text();
+
+    console.log('Contract generated successfully');
     res.json({
       success: true,
       contractCode: contractCode,
@@ -60,7 +85,7 @@ app.post('/api/generate', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error generating contract:', error);
+    console.error('Error in generate endpoint:', error.message);
     res.status(500).json({
       error: 'Failed to generate contract',
       message: error.message
@@ -77,31 +102,57 @@ app.post('/api/explain', async (req, res) => {
       return res.status(400).json({ error: 'Contract code is required' });
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert Solidity code analyst. 
-          Explain smart contracts in clear, simple English.
-          Focus on:
-          1. What the contract does (main purpose)
-          2. Key functions and their purposes
-          3. Security features and potential risks
-          4. Gas optimization considerations
-          5. Integration possibilities
-          Keep explanations beginner-friendly but technically accurate.`
-        },
-        {
-          role: "user",
-          content: `Please explain this Solidity smart contract:\n\n${contractCode}`
-        }
-      ],
-      max_tokens: 1500,
-      temperature: 0.2
-    });
+    const systemPrompt = `You are an expert Solidity smart contract analyst who explains code to developers of all skill levels.
 
-    const explanation = completion.choices[0].message.content;
+ANALYZE AND EXPLAIN this smart contract in a clear, structured format:
+
+## 📋 CONTRACT OVERVIEW
+- **Purpose**: What does this contract do in simple terms?
+- **Type**: What kind of contract is this (ERC-20, NFT, DeFi, etc.)?
+- **Network**: Avalanche C-Chain compatibility
+
+## 🔧 KEY FUNCTIONS
+For each major function, explain:
+- **Function Name**: What it does in plain English
+- **Who can call it**: Public, only owner, etc.
+- **Parameters**: What inputs it needs
+- **What happens**: Step-by-step process
+
+## 🛡️ SECURITY FEATURES
+- **Access Controls**: Who can do what?
+- **Safety Mechanisms**: Built-in protections
+- **Potential Risks**: What could go wrong?
+
+## ⚡ GAS & EFFICIENCY
+- **Cost Estimates**: Approximate gas usage for main functions
+- **Optimization Notes**: How efficient is the code?
+- **Performance Tips**: Ways to reduce gas costs
+
+## 🔗 INTEGRATION GUIDE
+- **How to interact**: From other contracts or dApps
+- **Events emitted**: What events to listen for
+- **Common use cases**: Real-world applications
+- **Frontend Integration**: How web3 apps would connect
+
+## 💡 BEGINNER TIPS
+- **Key concepts**: Important Solidity/blockchain concepts used
+- **Learning resources**: What to study to understand this better
+- **Next steps**: How a developer might use or modify this
+
+## 🚨 IMPORTANT WARNINGS
+- **Potential vulnerabilities**: Security concerns to watch for
+- **Testing recommendations**: How to verify this contract works
+- **Deployment considerations**: What to check before going live
+
+Use simple language, avoid jargon, provide practical examples, and make it educational for developers learning Avalanche/Solidity.
+
+CONTRACT CODE TO ANALYZE:
+
+${contractCode}`;
+
+    const result = await model.generateContent(systemPrompt);
+    const response = await result.response;
+    const explanation = response.text();
 
     res.json({
       success: true,
