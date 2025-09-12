@@ -169,6 +169,37 @@ ${contractCode}`;
   }
 });
 
+// Import contract compiler
+const { compileContract } = require('./contractCompiler');
+
+// Contract Deployment endpoint
+app.post('/api/deploy/compile', async (req, res) => {
+  try {
+    const { contractCode } = req.body;
+
+    if (!contractCode) {
+      return res.status(400).json({ error: 'Contract code is required' });
+    }
+
+    console.log('Compiling contract...');
+    const compiledContract = compileContract(contractCode);
+
+    console.log('Contract compiled successfully');
+    res.json({
+      success: true,
+      abi: compiledContract.abi,
+      bytecode: compiledContract.bytecode
+    });
+
+  } catch (error) {
+    console.error('Error in contract compilation:', error.message);
+    res.status(500).json({
+      error: 'Failed to compile contract',
+      message: error.message
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -180,4 +211,5 @@ app.listen(PORT, () => {
   console.log(`📡 API endpoints:`);
   console.log(`   POST http://localhost:${PORT}/api/generate`);
   console.log(`   POST http://localhost:${PORT}/api/explain`);
+  console.log(`   POST http://localhost:${PORT}/api/deploy/compile`);
 });

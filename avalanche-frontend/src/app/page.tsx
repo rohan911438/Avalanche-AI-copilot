@@ -3,10 +3,17 @@
 import { useState } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { Zap, FileText, Copy, CheckCircle, AlertCircle, Loader } from 'lucide-react'
+import { Zap, FileText, Copy, CheckCircle, AlertCircle, Loader, Rocket } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+// Import ContractDeployer with dynamic import to avoid SSR issues with window.ethereum
+const ContractDeployer = dynamic(
+  () => import('./components/ContractDeployer'),
+  { ssr: false }
+)
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'generate' | 'explain'>('generate')
+  const [activeTab, setActiveTab] = useState<'generate' | 'explain' | 'deploy'>('generate')
   const [prompt, setPrompt] = useState('')
   const [contractCode, setContractCode] = useState('')
   const [result, setResult] = useState('')
@@ -144,43 +151,58 @@ export default function Home() {
             <FileText className="w-4 h-4 inline mr-2" />
             Explain
           </button>
+          <button
+            onClick={() => setActiveTab('deploy')}
+            className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-colors ${
+              activeTab === 'deploy'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Rocket className="w-4 h-4 inline mr-2" />
+            Deploy
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Input Section */}
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                {activeTab === 'generate' ? 'Describe Your Contract' : 'Paste Contract Code'}
-              </h2>
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  {activeTab === 'generate' 
+                    ? 'Describe Your Contract' 
+                    : activeTab === 'explain' 
+                      ? 'Paste Contract Code'
+                      : 'Deploy to Avalanche'}
+                </h2>
 
-              {activeTab === 'generate' ? (
-                <>
-                  <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="e.g., Create an ERC-20 token with name 'MyToken' and symbol 'MTK'"
-                    className="w-full h-32 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  />
-                  <button
-                    onClick={handleGenerate}
-                    disabled={loading || !prompt.trim()}
-                    className="w-full mt-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-                  >
-                    {loading ? (
-                      <Loader className="w-4 h-4 animate-spin mr-2" />
-                    ) : (
-                      <Zap className="w-4 h-4 mr-2" />
-                    )}
-                    {loading ? 'Generating...' : 'Generate Contract'}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <textarea
-                    value={contractCode}
-                    onChange={(e) => setContractCode(e.target.value)}
-                    placeholder={`Paste your Solidity contract code here...
+                {activeTab === 'generate' ? (
+                  <>
+                    <textarea
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      placeholder="e.g., Create an ERC-20 token with name 'MyToken' and symbol 'MTK'"
+                      className="w-full h-32 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    />
+                    <button
+                      onClick={handleGenerate}
+                      disabled={loading || !prompt.trim()}
+                      className="w-full mt-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+                    >
+                      {loading ? (
+                        <Loader className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Zap className="w-4 h-4 mr-2" />
+                      )}
+                      {loading ? 'Generating...' : 'Generate Contract'}
+                    </button>
+                  </>
+                ) : activeTab === 'explain' ? (
+                  <>
+                    <textarea
+                      value={contractCode}
+                      onChange={(e) => setContractCode(e.target.value)}
+                      placeholder={`Paste your Solidity contract code here...
 
 Example:
 pragma solidity ^0.8.0;
@@ -191,25 +213,54 @@ contract MyToken is ERC20 {
         _mint(msg.sender, 1000000 * 10 ** decimals());
     }
 }`}
-                    className="w-full h-40 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-sm"
-                  />
-                  <button
-                    onClick={handleExplain}
-                    disabled={loading || !contractCode.trim()}
-                    className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-                  >
-                    {loading ? (
-                      <Loader className="w-4 h-4 animate-spin mr-2" />
-                    ) : (
-                      <FileText className="w-4 h-4 mr-2" />
-                    )}
-                    {loading ? 'Explaining...' : 'Explain Contract'}
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Example Prompts */}
+                      className="w-full h-40 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-sm"
+                    />
+                    <button
+                      onClick={handleExplain}
+                      disabled={loading || !contractCode.trim()}
+                      className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+                    >
+                      {loading ? (
+                        <Loader className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <FileText className="w-4 h-4 mr-2" />
+                      )}
+                      {loading ? 'Explaining...' : 'Explain Contract'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Deploy Tab Content */}
+                    <p className="text-gray-600 mb-4">
+                      Deploy your smart contract directly to the Avalanche network.
+                      Connect your MetaMask wallet to get started.
+                    </p>
+                    
+                    {/* Contract Code Input for Deployment */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Contract Code to Deploy
+                      </label>
+                      <textarea
+                        value={contractCode}
+                        onChange={(e) => setContractCode(e.target.value)}
+                        placeholder="Paste your Solidity contract code here..."
+                        className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-sm"
+                      />
+                    </div>
+                    
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 mb-4">
+                      <p className="font-medium mb-1">💡 Tip: Generate or Explain First</p>
+                      <p>You can generate a contract in the "Generate" tab or paste existing code here.</p>
+                    </div>
+                    
+                    <ContractDeployer 
+                      contractCode={contractCode}
+                      API_BASE_URL={API_BASE_URL}
+                    />
+                  </>
+                )}
+              </div>            {/* Example Prompts */}
             {activeTab === 'generate' && (
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Example Prompts</h3>
