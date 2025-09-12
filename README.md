@@ -24,136 +24,322 @@ Our AI-powered copilot streamlines the entire development workflow:
 
 ### 1. Contract Explainer
 - **Input**: Solidity code or Avalanche contract address
-- **Process**: Fetches verified source code via SnowTrace API
+- **Process**: AI analyzes the code using Gemini AI
 - **Output**: Plain English explanation highlighting functions, permissions, and risks
 
 ### 2. Contract Generator
 - **Input**: Natural language request (e.g., "Create an ERC-20 token with 1M supply")
-- **Process**: AI generates secure Solidity using OpenZeppelin standards
+- **Process**: AI generates secure Solidity using Gemini AI with OpenZeppelin standards
 - **Output**: Clean, editable contract code in web editor
 
 ### 3. Contract Deployment
 - **Input**: Generated or modified contract code
-- **Process**: Compiles with Hardhat, deploys via AvalancheJS SDK
-- **Output**: Contract address and SnowTrace explorer link
+- **Process**: Compiles with solc.js, deploys via ethers.js and MetaMask
+- **Output**: Contract address and Snowtrace explorer link
+
+## ✨ Features Added
+
+- **Contract Generation**: Create Solidity contracts from natural language prompts
+- **Contract Explanation**: Get detailed explanations of complex Solidity code
+- **Contract Deployment**: Deploy contracts directly to Avalanche networks
+- **MetaMask Integration**: Connect your wallet to sign and pay for deployment transactions
+- **Network Selection**: Choose between Fuji Testnet and Mainnet for deployment
+- **Snowtrace Explorer Integration**: View deployed contracts on the blockchain explorer
 
 ## 🏗️ System Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │    Backend      │    │  Blockchain     │
-│ (React/Next.js) │◄──►│ (FastAPI/Node)  │◄──►│   Avalanche     │
-│   + Tailwind    │    │   + AI Layer    │    │  Fuji Testnet   │
+│ (React/Next.js) │◄──►│   (Node.js)     │◄──►│   Avalanche     │
+│   + Tailwind    │    │   + Gemini AI   │    │  Fuji Testnet   │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
 ### Frontend Stack
 - **Framework**: React/Next.js
 - **Styling**: Tailwind CSS
+- **Blockchain Integration**: ethers.js, MetaMask
 - **Features**: Chat interface, code editor, deployment dashboard
 
 ### Backend Stack
-- **API**: FastAPI or Node.js/Express
-- **AI Integration**: OpenAI GPT-4o-mini
-- **Compilation**: Hardhat framework
-- **Deployment**: AvalancheJS SDK
+- **API**: Node.js/Express
+- **AI Integration**: Google Gemini AI
+- **Compilation**: solc.js
+- **Code Highlighting**: react-syntax-highlighter
 
 ### Blockchain Integration
-- **Network**: Avalanche Fuji Testnet
-- **Explorer**: SnowTrace API for contract verification
+- **Network**: Avalanche Fuji Testnet and C-Chain Mainnet
+- **Explorer**: Snowtrace for transaction verification
 - **Standards**: OpenZeppelin for secure contract templates
 
 ## 🛠️ API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/explain` | POST | Analyze and explain smart contract code |
-| `/generate` | POST | Generate Solidity contract from description |
-| `/deploy` | POST | Compile and deploy contract to Avalanche |
+| `/api/explain` | POST | Analyze and explain smart contract code |
+| `/api/generate` | POST | Generate Solidity contract from description |
+| `/api/deploy/compile` | POST | Compile contract and return ABI and bytecode |
 
 ## 📱 Example Workflow
 
-1. **Explain Contract**
-   ```
-   User: "Explain contract 0xABC123 on Avalanche Fuji"
-   System: Fetches source → AI analyzes → "This is an ERC-20 contract with mint/burn functions"
-   ```
-
-2. **Generate Contract**
+1. **Generate Contract**
    ```
    User: "Create an ERC-20 token named HackathonCoin with 1M supply"
    System: AI generates → Displays Solidity in editor
    ```
 
+2. **Explain Contract**
+   ```
+   User: Pastes complex Solidity code
+   System: AI analyzes → "This is an ERC-20 contract with mint/burn functions..."
+   ```
+
 3. **Deploy Contract**
    ```
-   User: Clicks "Deploy" button
-   System: Compiles → Deploys → "Contract deployed at 0xXYZ456. View on SnowTrace"
+   User: Connects MetaMask → Clicks "Deploy" button
+   System: Compiles → User signs transaction → "Contract deployed at 0xXYZ456. View on Snowtrace"
    ```
-
-## 🎯 Target Impact
-
-- **🚀 Faster Onboarding**: Reduce learning curve for new Avalanche developers
-- **🛡️ Safer Development**: Generate secure contracts using proven standards
-- **⚡ Rapid Prototyping**: Accelerate smart contract experimentation
-- **📈 Ecosystem Growth**: Strengthen Avalanche developer community
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js (v18+)
-- Python (v3.8+) if using FastAPI
-- Avalanche wallet with Fuji testnet AVAX
+- Google Gemini API key
+- MetaMask browser extension for deployment
+- AVAX tokens for deployment (use the [Avalanche Faucet](https://faucet.avax.network/) for Fuji Testnet)
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/ai-avalanche-copilot.git
-   cd ai-avalanche-copilot
+   git clone https://github.com/rohan911438/Avalanche-AI-copilot.git
+   cd Avalanche-AI-copilot
    ```
 
-2. **Install frontend dependencies**
+2. **Install backend dependencies**
    ```bash
-   cd frontend
+   cd backend
    npm install
    ```
 
-3. **Install backend dependencies**
+3. **Configure backend environment variables**
    ```bash
-   cd ../backend
-   npm install  # or pip install -r requirements.txt for Python
+   # Create/edit .env file in the backend directory
+   GEMINI_API_KEY=your_gemini_api_key
+   PORT=3001
    ```
 
-4. **Configure environment variables**
+4. **Install frontend dependencies**
    ```bash
-   cp .env.example .env
-   # Add your OpenAI API key and Avalanche RPC endpoints
+   cd ../avalanche-frontend
+   npm install
    ```
 
-5. **Start development servers**
+### Starting the Application
+
+1. **Start the backend server**
    ```bash
-   # Frontend
+   # From the backend directory
+   node server.js
+   ```
+   The server will start on port 3001 (or the port specified in your .env file).
+   You should see: "🚀 Server running on port 3001"
+
+2. **Start the frontend development server**
+   ```bash
+   # From the avalanche-frontend directory
    npm run dev
+   ```
+   The frontend will be available at [http://localhost:3000](http://localhost:3000)
 
-   # Backend (in separate terminal)
-   npm start  # or python main.py
+### Using the Application
+
+1. **Generate a Contract**:
+   - Navigate to the "Generate" tab
+   - Enter a description of the contract you want to create
+   - Click "Generate Contract"
+
+2. **Explain a Contract**:
+   - Navigate to the "Explain" tab
+   - Paste the Solidity code you want to analyze
+   - Click "Explain Contract"
+
+3. **Deploy a Contract**:
+   - Navigate to the "Deploy" tab
+   - Ensure you have a contract ready (either generated or pasted)
+   - Connect your MetaMask wallet
+   - Select the network (Fuji Testnet recommended for testing)
+   - Click "Compile Contract" and then "Deploy to Avalanche"
+   - Confirm the transaction in MetaMask
+   - View your deployed contract on Snowtrace
+
+### Troubleshooting
+
+**Backend won't start**:
+- Ensure you have installed all dependencies: `npm install`
+- Verify your .env file contains the required GEMINI_API_KEY
+- Check if the port is already in use
+
+**MetaMask Connection Issues**:
+- Ensure MetaMask is installed and unlocked
+- Add Avalanche networks to MetaMask if they aren't already configured
+
+**Deployment Errors**:
+- For Fuji Testnet: Make sure you have testnet AVAX from the faucet
+- Check compilation errors in the console
+- Verify you're on the correct network in MetaMask
+
+## 🔗 Links
+
+- [Avalanche Documentation](https://docs.avax.network/)
+- [Snowtrace Explorer](https://snowtrace.io/)
+- [Fuji Testnet Explorer](https://testnet.snowtrace.io/)
+- [Avalanche Faucet](https://faucet.avax.network/)
+- [OpenZeppelin Contracts](https://openzeppelin.com/contracts/)
+
+## 🏆 Project Status
+
+This project has successfully implemented all core features including:
+- AI-powered contract generation
+- Detailed contract explanation
+- Direct deployment to Avalanche networks
+
+Future enhancements could include:
+- Contract verification on Snowtrace
+- Contract interaction interface
+- Template library for common contract types
+
+---
+
+**Built with ❤️ for the Avalanche community**
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js (v18+)
+- Google Gemini API key
+- MetaMask browser extension for deployment
+- AVAX tokens for deployment (use the [Avalanche Faucet](https://faucet.avax.network/) for Fuji Testnet)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/rohan911438/Avalanche-AI-copilot.git
+   cd Avalanche-AI-copilot
    ```
 
-## 🔧 Configuration
+2. **Install backend dependencies**
+   ```bash
+   cd backend
+   npm install
+   ```
 
-Create a `.env` file with the following variables:
+3. **Configure backend environment variables**
+   ```bash
+   # Create/edit .env file in the backend directory
+   GEMINI_API_KEY=your_gemini_api_key
+   PORT=3001
+   ```
 
-```env
-# AI Configuration
-OPENAI_API_KEY=your_openai_api_key
+4. **Install frontend dependencies**
+   ```bash
+   cd ../avalanche-frontend
+   npm install
+   ```
 
-# Avalanche Configuration
-AVALANCHE_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
-SNOWTRACE_API_KEY=your_snowtrace_api_key
+### Starting the Application
 
-# Deployment Configuration
-PRIVATE_KEY=your_deployment_wallet_private_key
+1. **Start the backend server**
+   ```bash
+   # From the backend directory
+   node server.js
+   ```
+   The server will start on port 3001 (or the port specified in your .env file).
+   You should see: "🚀 Server running on port 3001"
+
+   **If using PowerShell with Execution Policy restrictions:**
+   ```powershell
+   # Run PowerShell as Administrator first and execute:
+   Set-ExecutionPolicy RemoteSigned
+   ```
+   Or use Command Prompt instead and run:
+   ```cmd
+   node "full\path\to\server.js"
+   ```
+
+2. **Start the frontend development server**
+   ```bash
+   # From the avalanche-frontend directory
+   npm run dev
+   ```
+   The frontend will be available at [http://localhost:3000](http://localhost:3000)
+
+   **If using PowerShell with Execution Policy restrictions:**
+   Use Command Prompt instead and run the same command.
+
+### Using the Application
+
+1. **Generate a Contract**:
+   - Navigate to the "Generate" tab
+   - Enter a description of the contract you want to create
+   - Click "Generate Contract"
+
+2. **Explain a Contract**:
+   - Navigate to the "Explain" tab
+   - Paste the Solidity code you want to analyze
+   - Click "Explain Contract"
+
+3. **Deploy a Contract**:
+   - Navigate to the "Deploy" tab
+   - Ensure you have a contract ready (either generated or pasted)
+   - Connect your MetaMask wallet
+   - Select the network (Fuji Testnet recommended for testing)
+   - Click "Compile Contract" and then "Deploy to Avalanche"
+   - Confirm the transaction in MetaMask
+   - View your deployed contract on Snowtrace
+
+### Troubleshooting
+
+**Backend won't start**:
+- Ensure you have installed all dependencies: `npm install`
+- Verify your .env file contains the required GEMINI_API_KEY
+- Check if the port is already in use
+
+**Frontend npm commands fail**:
+- If using PowerShell with Execution Policy restrictions, try using Command Prompt instead
+- Or run PowerShell as Administrator and execute: `Set-ExecutionPolicy RemoteSigned`
+
+**MetaMask Connection Issues**:
+- Ensure MetaMask is installed and unlocked
+- Add Avalanche networks to MetaMask if they aren't already configured
+
+**Deployment Errors**:
+- For Fuji Testnet: Make sure you have testnet AVAX from the faucet
+- Check compilation errors in the console
+- Verify you're on the correct network in MetaMask
+
+## 🔧 Configuration for MetaMask
+
+To configure MetaMask for Avalanche networks:
+
+**Fuji Testnet**:
+```
+Network Name: Avalanche Fuji Testnet
+New RPC URL: https://api.avax-test.network/ext/bc/C/rpc
+Chain ID: 43113 (0xA869 in hex)
+Currency Symbol: AVAX
+Block Explorer URL: https://testnet.snowtrace.io/
+```
+
+**Avalanche Mainnet**:
+```
+Network Name: Avalanche C-Chain
+New RPC URL: https://api.avax.network/ext/bc/C/rpc
+Chain ID: 43114 (0xA86A in hex)
+Currency Symbol: AVAX
+Block Explorer URL: https://snowtrace.io/
 ```
 
 ## 🤝 Contributing
@@ -173,13 +359,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🔗 Links
 
 - [Avalanche Documentation](https://docs.avax.network/)
-- [SnowTrace Explorer](https://testnet.snowtrace.io/)
+- [Snowtrace Explorer](https://snowtrace.io/)
+- [Fuji Testnet Explorer](https://testnet.snowtrace.io/)
+- [Avalanche Faucet](https://faucet.avax.network/)
 - [OpenZeppelin Contracts](https://openzeppelin.com/contracts/)
-- [Hardhat Framework](https://hardhat.org/)
-
-## 🏆 Hackathon
-
-This project was developed for [Hackathon Name] with the goal of improving developer experience in the Avalanche ecosystem.
+- [Google Gemini AI](https://ai.google.dev/docs)
 
 ---
 
