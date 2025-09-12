@@ -5,6 +5,8 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Zap, FileText, Copy, CheckCircle, AlertCircle, Loader, Rocket } from 'lucide-react'
 import dynamic from 'next/dynamic'
+// @ts-ignore
+import Navigation from './components/Navigation'
 
 // Import ContractDeployer with dynamic import to avoid SSR issues with window.ethereum
 const ContractDeployer = dynamic(
@@ -108,6 +110,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <Navigation />
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">

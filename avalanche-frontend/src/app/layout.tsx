@@ -28,9 +28,15 @@ export default function RootLayout({
         <script src="/ethers-loader.js" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-100 min-h-screen`}
       >
-        {children}
+        {/* @ts-ignore */}
+        <div className="flex flex-col min-h-screen">
+          {/* @ts-ignore */}
+          <div className="flex-grow">
+            {children}
+          </div>
+        </div>
       </body>
     </html>
   );

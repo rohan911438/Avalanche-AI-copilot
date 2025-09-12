@@ -65,10 +65,15 @@ app.post('/api/generate', async (req, res) => {
 Request: ${prompt}
 
 Include:
-- SPDX license and pragma
-- OpenZeppelin imports when needed  
-- Clear comments
+- SPDX license and pragma solidity ^0.8.0;
+- When using OpenZeppelin contracts, use these local imports:
+  import "./Ownable.sol"; 
+  import "./ReentrancyGuard.sol";
+  import "./Pausable.sol";
+- Available OpenZeppelin contracts: Ownable, ReentrancyGuard, Pausable
+- Clear comments and documentation
 - Basic security practices
+- Use payable(address) when transferring ETH to addresses
 
 Generate only Solidity code:`;
 
@@ -170,7 +175,7 @@ ${contractCode}`;
 });
 
 // Import contract compiler
-const { compileContract } = require('./contractCompiler');
+const { compileContract, cleanSolidityCode } = require('./contractCompiler');
 
 // Contract Deployment endpoint
 app.post('/api/deploy/compile', async (req, res) => {
@@ -182,7 +187,9 @@ app.post('/api/deploy/compile', async (req, res) => {
     }
 
     console.log('Compiling contract...');
-    const compiledContract = compileContract(contractCode);
+    // Clean the contract code before compiling
+    const cleanedCode = cleanSolidityCode(contractCode);
+    const compiledContract = compileContract(cleanedCode);
 
     console.log('Contract compiled successfully');
     res.json({

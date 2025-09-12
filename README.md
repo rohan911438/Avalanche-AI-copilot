@@ -45,6 +45,7 @@ Our AI-powered copilot streamlines the entire development workflow:
 - **MetaMask Integration**: Connect your wallet to sign and pay for deployment transactions
 - **Network Selection**: Choose between Fuji Testnet and Mainnet for deployment
 - **Snowtrace Explorer Integration**: View deployed contracts on the blockchain explorer
+- **OpenZeppelin Integration**: Use of vendored OpenZeppelin contracts for security and standardization
 
 ## 🏗️ System Architecture
 
@@ -364,6 +365,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Avalanche Faucet](https://faucet.avax.network/)
 - [OpenZeppelin Contracts](https://openzeppelin.com/contracts/)
 - [Google Gemini AI](https://ai.google.dev/docs)
+- [OpenZeppelin in Avalanche Copilot](OPENZEPPELIN_CONTRACTS.md)
 
 ---
 

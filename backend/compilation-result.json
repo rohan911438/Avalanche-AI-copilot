@@ -1,0 +1,10 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    }
+  ],
+  "bytecode": "0x6080604052348015600e575f5ffd5b5060015f55603e80601e5f395ff3fe60806040525f5ffdfea2646970667358221220dc9ee656086c1714843ed8cf5b0bef02418eb08cd313b2fda4d6de1de3f64c5b64736f6c634300081e0033"
+}
