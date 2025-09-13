@@ -182,19 +182,29 @@ const { compileContractWithHardhat } = require('./hardhatCompiler');
 // Contract Deployment endpoint
 app.post('/api/deploy/compile', async (req, res) => {
   try {
+    console.log('Contract compilation request received');
     const { contractCode } = req.body;
 
     if (!contractCode) {
+      console.log('No contract code provided in request');
       return res.status(400).json({ error: 'Contract code is required' });
     }
 
+    console.log('Contract code received, length:', contractCode.length);
+    console.log('First 100 chars of contract:', contractCode.substring(0, 100));
     console.log('Compiling contract with Hardhat...');
     
     // Use the new Hardhat compiler
     const hardhatCompiler = require('./hardhatCompiler');
-    const compilationResult = await hardhatCompiler.compileContractWithHardhat(contractCode);
+    
+    // Use contractName if provided, otherwise use default
+    const contractName = req.body.contractName || 'TempContract.sol';
+    console.log('Using contract name:', contractName);
+    
+    const compilationResult = await hardhatCompiler.compileContractWithHardhat(contractCode, contractName);
     
     if (!compilationResult.success) {
+      console.error('Contract compilation failed:', compilationResult.error);
       return res.status(400).json({ 
         success: false,
         error: compilationResult.error || 'Compilation failed'
@@ -202,6 +212,9 @@ app.post('/api/deploy/compile', async (req, res) => {
     }
 
     console.log('Contract compiled successfully with Hardhat');
+    console.log('ABI length:', compilationResult.abi ? compilationResult.abi.length : 'N/A');
+    console.log('Bytecode length:', compilationResult.bytecode ? compilationResult.bytecode.length : 'N/A');
+    
     res.json({
       success: true,
       abi: compilationResult.abi,

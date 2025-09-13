@@ -1,0 +1,293 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "C:\\Users\\ABHINAV KUMAR\\Desktop\\Avalanche\\hardhat-project\\contracts\\IPLBettingContract.sol": {
+      "lastModificationDate": 1757747100232,
+      "contentHash": "9a5135e0320a14ea903845e00f083a01",
+      "sourceName": "contracts/IPLBettingContract.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./Ownable.sol",
+        "./ReentrancyGuard.sol",
+        "./Pausable.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "IPLBettingContract"
+      ]
+    },
+    "C:\\Users\\ABHINAV KUMAR\\Desktop\\Avalanche\\hardhat-project\\contracts\\Ownable.sol": {
+      "lastModificationDate": 1757747100238,
+      "contentHash": "c4f7ce93c7203f8443fe78eaee253667",
+      "sourceName": "contracts/Ownable.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "Ownable"
+      ]
+    },
+    "C:\\Users\\ABHINAV KUMAR\\Desktop\\Avalanche\\hardhat-project\\contracts\\Pausable.sol": {
+      "lastModificationDate": 1757747100238,
+      "contentHash": "6ee9cd31e7c6645074f09113afdd32e4",
+      "sourceName": "contracts/Pausable.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "Pausable"
+      ]
+    },
+    "C:\\Users\\ABHINAV KUMAR\\Desktop\\Avalanche\\hardhat-project\\contracts\\ReentrancyGuard.sol": {
+      "lastModificationDate": 1757747100239,
+      "contentHash": "387f6ec7af7115b65c4c8d4cd4012aa1",
+      "sourceName": "contracts/ReentrancyGuard.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "ReentrancyGuard"
+      ]
+    },
+    "C:\\Users\\ABHINAV KUMAR\\Desktop\\Avalanche\\hardhat-project\\contracts\\SimpleStorageWithOZ.sol": {
+      "lastModificationDate": 1757747100241,
+      "contentHash": "3e93bc7f9594a431a59a4e0ac5c5a668",
+      "sourceName": "contracts/SimpleStorageWithOZ.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./Ownable.sol",
+        "./Pausable.sol",
+        "./ReentrancyGuard.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "SimpleStorageWithOZ"
+      ]
+    },
+    "C:\\Users\\ABHINAV KUMAR\\Desktop\\Avalanche\\hardhat-project\\contracts\\SimpleTest.sol": {
+      "lastModificationDate": 1757768343545,
+      "contentHash": "c92f12402d5d1ba96df012d9c101f088",
+      "sourceName": "contracts/SimpleTest.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "SimpleTest"
+      ]
+    },
+    "C:\\Users\\ABHINAV KUMAR\\Desktop\\Avalanche\\hardhat-project\\contracts\\TempContract.sol": {
+      "lastModificationDate": 1757770094206,
+      "contentHash": "7cae9cd3875607c8a07a80be268d0f73",
+      "sourceName": "contracts/TempContract.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "SimpleStorage"
+      ]
+    },
+    "C:\\Users\\ABHINAV KUMAR\\Desktop\\Avalanche\\hardhat-project\\contracts\\utils\\Context.sol": {
+      "lastModificationDate": 1757747100243,
+      "contentHash": "dbff99a31ca06ea6f061b6be2298ccbe",
+      "sourceName": "contracts/utils/Context.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "Context"
+      ]
+    }
+  }
+}

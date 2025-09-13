@@ -27,7 +27,12 @@ export default function ContractCompiler() {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.message || 'Compilation failed');
+        throw new Error(data.error || data.message || 'Compilation failed');
+      }
+      
+      // Check if the API reports success: false
+      if (data.success === false) {
+        throw new Error(data.error || 'Compilation failed');
       }
       
       // Store the results
@@ -74,7 +79,10 @@ export default function ContractCompiler() {
       
       {error && (
         <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
+          <h3 className="font-semibold mb-1">Compilation Error</h3>
+          <pre className="overflow-auto whitespace-pre-wrap text-sm">
+            {error}
+          </pre>
         </div>
       )}
       
