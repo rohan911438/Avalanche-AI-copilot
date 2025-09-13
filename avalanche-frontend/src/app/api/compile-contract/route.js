@@ -1,7 +1,7 @@
 // API route for contract compilation that automatically transforms imports
 // Save this file to your Next.js API routes folder (e.g., /pages/api/compile-contract.js)
 
-import { transformContractCode } from '../../../backend/contractTransformer';
+import { prepareContractForCompilation } from '../../../backend/importResolver';
 import { compileContract } from '../../../backend/contractCompiler';
 
 export default async function handler(req, res) {
@@ -16,8 +16,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Contract code is required' });
     }
     
-    // Transform the contract code to inline all dependencies
-    const transformedCode = transformContractCode(contractCode);
+    // Transform the contract code to inline all dependencies using enhanced resolver
+    const transformedCode = prepareContractForCompilation(contractCode);
     
     // Compile the transformed contract
     const compilationResult = compileContract(transformedCode);

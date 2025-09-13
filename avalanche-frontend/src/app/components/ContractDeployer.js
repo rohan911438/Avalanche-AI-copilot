@@ -13,6 +13,10 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
   const [currentAccount, setCurrentAccount] = useState('')
   const [compiledContract, setCompiledContract] = useState(null)
   const [gasEstimate, setGasEstimate] = useState(null) // { gas, gasPrice, totalCost }
+  const [constructorArgs, setConstructorArgs] = useState([]) // Array of constructor argument objects
+  const [constructorInputs, setConstructorInputs] = useState([]) // Array of ABI constructor input definitions
+  const [avaxBalance, setAvaxBalance] = useState(null) // User's AVAX balance
+  const [balanceCheckStatus, setBalanceCheckStatus] = useState('idle') // idle, checking, sufficient, insufficient
 
   // Check if MetaMask is installed and wallet is connected
   useEffect(() => {
@@ -25,7 +29,14 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
           if (accounts.length > 0) {
             setCurrentAccount(accounts[0])
             setWalletConnected(true)
+            
+            // Check the user's AVAX balance
+            await checkAvaxBalance(accounts[0])
           }
+          
+          // Set up event listeners for account and chain changes
+          window.ethereum.on('accountsChanged', handleAccountsChanged)
+          window.ethereum.on('chainChanged', handleChainChanged)
         }
       } catch (error) {
         console.error('Error checking wallet connection:', error)
@@ -33,7 +44,71 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
     }
     
     checkWalletConnection()
+    
+    // Clean up event listeners
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener('accountsChanged', handleAccountsChanged)
+        window.ethereum.removeListener('chainChanged', handleChainChanged)
+      }
+    }
   }, [])
+  
+  // Handle account changes
+  const handleAccountsChanged = async (accounts) => {
+    if (accounts.length === 0) {
+      // User disconnected wallet
+      setWalletConnected(false)
+      setCurrentAccount('')
+      setAvaxBalance(null)
+    } else if (accounts[0] !== currentAccount) {
+      // Account changed
+      setCurrentAccount(accounts[0])
+      await checkAvaxBalance(accounts[0])
+    }
+  }
+  
+  // Handle chain changes
+  const handleChainChanged = async () => {
+    // When chain changes, refresh page to ensure consistent state
+    // This is recommended by MetaMask
+    window.location.reload()
+  }
+  
+  // Fetch and check the user's AVAX balance
+  const checkAvaxBalance = async (account) => {
+    if (!account) return
+    
+    try {
+      setBalanceCheckStatus('checking')
+      
+      // Initialize provider
+      const provider = new ethers.providers.Web3Provider(window.ethereum)
+      
+      // Get balance in wei
+      const balanceWei = await provider.getBalance(account)
+      
+      // Convert wei to AVAX
+      const balanceAvax = ethers.utils.formatEther(balanceWei)
+      
+      setAvaxBalance({
+        wei: balanceWei.toString(),
+        avax: balanceAvax
+      })
+      
+      setBalanceCheckStatus('idle')
+      
+      // Return the balance for use in other functions
+      return {
+        wei: balanceWei,
+        avax: balanceAvax
+      }
+    } catch (error) {
+      console.error('Error checking AVAX balance:', error)
+      setBalanceCheckStatus('idle')
+      return null
+    }
+  }
 
   // Connect to MetaMask wallet
   const connectWallet = async () => {
@@ -50,6 +125,9 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
       
       setCurrentAccount(accounts[0])
       setWalletConnected(true)
+      
+      // Check AVAX balance
+      await checkAvaxBalance(accounts[0])
       
       // Check if we're on the right network
       await checkAndSwitchNetwork()
@@ -122,6 +200,45 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
     })
   }
 
+  // Parse constructor inputs from ABI
+  const parseConstructorInputs = (abi) => {
+    if (!abi || !Array.isArray(abi)) return []
+
+    // Find the constructor ABI entry
+    const constructorAbi = abi.find(item => item.type === 'constructor')
+    
+    // If no constructor or no inputs, return empty array
+    if (!constructorAbi || !constructorAbi.inputs || constructorAbi.inputs.length === 0) {
+      return []
+    }
+    
+    return constructorAbi.inputs
+  }
+  
+  // Initialize constructor arguments based on inputs
+  const initializeConstructorArgs = (inputs) => {
+    return inputs.map(input => {
+      let defaultValue = ''
+      
+      // Set appropriate default values based on type
+      if (input.type.includes('int')) {
+        defaultValue = '0'
+      } else if (input.type === 'bool') {
+        defaultValue = 'false'
+      } else if (input.type === 'address') {
+        defaultValue = '0x0000000000000000000000000000000000000000'
+      } else if (input.type.includes('[]')) {
+        defaultValue = '[]'
+      }
+      
+      return {
+        name: input.name,
+        type: input.type,
+        value: defaultValue
+      }
+    })
+  }
+
   // Compile the contract using our backend
   const compileContract = async () => {
     try {
@@ -142,6 +259,14 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
       }
       
       const data = await response.json()
+      
+      // Parse constructor inputs from ABI
+      const inputs = parseConstructorInputs(data.abi)
+      setConstructorInputs(inputs)
+      
+      // Initialize constructor arguments
+      setConstructorArgs(initializeConstructorArgs(inputs))
+      
       setCompiledContract(data)
       setDeploymentStatus('ready')
       return data
@@ -188,8 +313,17 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
       // Get current gas price
       const gasPrice = await provider.getGasPrice()
       
-      // Estimate the gas limit for deployment
-      const deploymentData = factory.getDeployTransaction()
+      // Parse constructor arguments if any
+      let args = []
+      if (constructorArgs.length > 0) {
+        args = parseConstructorArgValues()
+      }
+      
+      // Estimate the gas limit for deployment with constructor args if needed
+      const deploymentData = constructorArgs.length > 0 
+        ? factory.getDeployTransaction(...args)
+        : factory.getDeployTransaction()
+      
       const estimatedGas = await provider.estimateGas(deploymentData)
       
       // Calculate total cost in AVAX
@@ -205,6 +339,9 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
       
       setGasEstimate(estimateData)
       setDeploymentStatus('ready')
+      
+      // Check if the user has sufficient balance
+      await checkBalanceSufficiency()
       
       return estimateData
     } catch (error) {
@@ -237,8 +374,20 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
       if (!gasEstimate) {
         const estimateData = await estimateGas()
         if (!estimateData) return // Gas estimation failed
+      }
+      
+      // Check if user has sufficient balance
+      const isBalanceSufficient = await checkBalanceSufficiency()
+      
+      // If balance is insufficient, show warning but allow user to proceed
+      if (!isBalanceSufficient) {
+        const shouldProceed = window.confirm(
+          `Warning: Your AVAX balance (${Number(avaxBalance.avax).toFixed(6)} AVAX) may not be sufficient for this deployment. The estimated cost is ${Number(gasEstimate.totalCost).toFixed(6)} AVAX. Do you want to proceed anyway?`
+        )
         
-        // Add confirmation step here if needed
+        if (!shouldProceed) {
+          return // User chose not to proceed
+        }
       }
       
       setDeploymentStatus('deploying')
@@ -254,8 +403,18 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
         signer
       )
       
-      // Deploy the contract
-      const contract = await factory.deploy()
+      // Parse constructor arguments if any
+      let args = []
+      if (constructorArgs.length > 0) {
+        args = parseConstructorArgValues()
+      }
+      
+      // Deploy the contract with constructor arguments if needed
+      console.log(`Deploying contract with args:`, args.length > 0 ? args : 'No constructor args')
+      
+      const contract = constructorArgs.length > 0 
+        ? await factory.deploy(...args)
+        : await factory.deploy()
       
       // Wait for deployment to finish
       console.log(`Deploying contract...`)
@@ -273,6 +432,70 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
     }
   }
 
+  // Handle constructor argument changes
+  const handleConstructorArgChange = (index, value) => {
+    const updatedArgs = [...constructorArgs]
+    updatedArgs[index].value = value
+    setConstructorArgs(updatedArgs)
+  }
+  
+  // Parse constructor arguments to appropriate types for contract deployment
+  const parseConstructorArgValues = () => {
+    return constructorArgs.map(arg => {
+      // Handle different types of arguments
+      if (arg.type.includes('int')) {
+        // For integer types
+        return arg.value // ethers.js will handle the conversion
+      } else if (arg.type === 'bool') {
+        // For boolean types
+        return arg.value === 'true'
+      } else if (arg.type === 'address') {
+        // For address types
+        return arg.value
+      } else if (arg.type.includes('[]')) {
+        // For array types, parse the JSON
+        try {
+          return JSON.parse(arg.value)
+        } catch (e) {
+          console.error(`Failed to parse array value for ${arg.name}:`, e)
+          return []
+        }
+      } else {
+        // For string and other types
+        return arg.value
+      }
+    })
+  }
+  
+  // Check if user has sufficient balance for deployment
+  const checkBalanceSufficiency = async () => {
+    if (!gasEstimate || !avaxBalance) {
+      // If we don't have both gas estimate and balance, refresh balance
+      if (currentAccount) {
+        await checkAvaxBalance(currentAccount)
+      }
+      
+      // If we have gas estimate but no balance, we can't check
+      if (!avaxBalance) {
+        return false
+      }
+    }
+    
+    // Convert both values to BigNumber for safe comparison
+    const estimatedCostWei = ethers.BigNumber.from(gasEstimate.totalWei)
+    const balanceWei = ethers.BigNumber.from(avaxBalance.wei)
+    
+    // Add 10% buffer to estimated cost for safety
+    const estimatedWithBuffer = estimatedCostWei.mul(110).div(100)
+    
+    // Compare and set status
+    const isBalanceSufficient = balanceWei.gt(estimatedWithBuffer)
+    
+    setBalanceCheckStatus(isBalanceSufficient ? 'sufficient' : 'insufficient')
+    
+    return isBalanceSufficient
+  }
+  
   // Get the appropriate explorer URL based on the network
   const getExplorerUrl = () => {
     const baseUrl = network === 'fuji' 
@@ -330,12 +553,78 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
           Connect MetaMask
         </button>
       ) : (
-        <div className="flex items-center space-x-2 text-sm">
-          <div className="w-2 h-2 rounded-full bg-green-500"></div>
-          <span className="font-medium text-gray-700">Connected:</span>
-          <span className="text-gray-500 truncate">
-            {currentAccount.substring(0, 6)}...{currentAccount.substring(38)}
-          </span>
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2 text-sm">
+            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+            <span className="font-medium text-gray-700">Connected:</span>
+            <span className="text-gray-500 truncate">
+              {currentAccount.substring(0, 6)}...{currentAccount.substring(38)}
+            </span>
+          </div>
+          
+          {/* AVAX Balance Display */}
+          {avaxBalance && (
+            <div className="flex items-center justify-between border border-gray-200 rounded-md p-2 bg-gray-50">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium">AVAX Balance:</span>
+                <span className="text-sm font-mono">
+                  {Number(avaxBalance.avax).toFixed(6)} AVAX
+                </span>
+              </div>
+              
+              {/* Balance Refresh Button */}
+              <button 
+                onClick={() => checkAvaxBalance(currentAccount)}
+                className="text-xs text-blue-600 hover:text-blue-800"
+              >
+                Refresh
+              </button>
+            </div>
+          )}
+          
+          {/* Balance Check Status */}
+          {balanceCheckStatus === 'insufficient' && gasEstimate && (
+            <div className="mt-1 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700 flex items-center">
+              <AlertCircle className="w-4 h-4 mr-1 text-yellow-500" />
+              <span>
+                Warning: Your balance may be insufficient for deployment (estimated cost: {Number(gasEstimate.totalCost).toFixed(6)} AVAX)
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Constructor Arguments */}
+      {constructorInputs.length > 0 && compiledContract && (
+        <div className="border border-gray-200 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Constructor Arguments</h3>
+          
+          <div className="space-y-3">
+            {constructorArgs.map((arg, index) => (
+              <div key={index} className="space-y-1">
+                <label className="block text-xs font-medium text-gray-700">
+                  {arg.name} <span className="text-gray-500">({arg.type})</span>
+                </label>
+                <input
+                  type="text"
+                  value={arg.value}
+                  onChange={(e) => handleConstructorArgChange(index, e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm"
+                  placeholder={`Enter ${arg.type} value`}
+                />
+                {arg.type === 'address' && (
+                  <p className="text-xs text-gray-500">
+                    Example: 0x71C7656EC7ab88b098defB751B7401B5f6d8976F
+                  </p>
+                )}
+                {arg.type.includes('[]') && (
+                  <p className="text-xs text-gray-500">
+                    Enter as JSON array: ["item1", "item2"] or [1, 2, 3]
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -389,7 +678,7 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
       
       {/* Gas Estimate Display */}
       {gasEstimate && (
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className={`p-3 ${balanceCheckStatus === 'insufficient' ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'} border rounded-lg`}>
           <h3 className="text-sm font-medium text-blue-800 mb-2">Estimated Deployment Cost</h3>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="text-gray-700">Gas Limit:</div>
@@ -400,9 +689,30 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
             
             <div className="text-gray-700 font-medium">Total Cost:</div>
             <div className="font-mono text-gray-900 font-medium">{parseFloat(gasEstimate.totalCost).toFixed(6)} AVAX</div>
+            
+            {/* Balance Comparison */}
+            {avaxBalance && (
+              <>
+                <div className="text-gray-700">Your Balance:</div>
+                <div className={`font-mono ${balanceCheckStatus === 'insufficient' ? 'text-yellow-700' : 'text-green-700'}`}>
+                  {parseFloat(avaxBalance.avax).toFixed(6)} AVAX
+                </div>
+              </>
+            )}
           </div>
+          
+          {balanceCheckStatus === 'insufficient' && (
+            <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded-md text-xs text-yellow-800 flex items-start space-x-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>
+                <strong>Warning:</strong> Your current balance appears to be insufficient for this deployment. 
+                Consider adding more funds to your wallet or using the Fuji testnet.
+              </span>
+            </div>
+          )}
+          
           <p className="mt-2 text-xs text-gray-600">
-            Note: Actual gas usage may vary slightly during deployment.
+            Note: Actual gas usage may vary slightly during deployment. A 10% buffer is recommended.
           </p>
         </div>
       )}
@@ -445,7 +755,9 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
           <li>Select the Avalanche network (Fuji Testnet recommended for testing)</li>
           <li>Connect your MetaMask wallet</li>
           <li>Compile your contract using our backend service</li>
+          {constructorInputs.length > 0 && <li>Fill in the constructor arguments for your contract</li>}
           <li>Estimate the gas cost to preview deployment expenses</li>
+          <li>Ensure you have sufficient AVAX balance for deployment</li>
           <li>Deploy to the selected Avalanche network</li>
           <li>View and interact with your contract on Snowtrace</li>
         </ol>
