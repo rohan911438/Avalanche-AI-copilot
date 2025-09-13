@@ -1,106 +1,122 @@
-# AI Avalanche Copilot 🏔️
+# Avalanche AI Copilot: Smart Contract Development Platform
 
-An intelligent web-based developer assistant that simplifies Avalanche blockchain development by providing AI-powered smart contract explanation, generation, and deployment capabilities.
+![Avalanche Logo](avalanche-frontend/public/globe.svg)
 
-## 🚀 Overview
+## Executive Summary
 
-The AI Avalanche Copilot addresses the steep learning curve faced by developers entering the Avalanche ecosystem. It provides three core functionalities:
+Avalanche AI Copilot is an advanced web-based development platform designed to revolutionize blockchain development on Avalanche. By leveraging Google's Gemini AI, the platform provides intelligent contract generation, analysis, and deployment capabilities, drastically reducing the learning curve for blockchain developers and accelerating time-to-market for decentralized applications.
 
-- **📖 Contract Explainer**: Understand existing smart contracts through AI-powered plain English explanations
-- **⚡ Contract Generator**: Generate secure Solidity contracts from natural language descriptions
-- **🚀 Contract Deployment**: Seamlessly deploy contracts to Avalanche Fuji Testnet with one click
+## 🚀 Key Features
 
-## 🎯 Problem Statement
+### Smart Contract Generation
+- **AI-Powered Contract Creation**: Convert natural language descriptions into professional-grade Solidity contracts
+- **OpenZeppelin Integration**: Automatically incorporate security best practices through industry-standard libraries
+- **Inline Dependency Resolution**: Seamlessly handle all contract dependencies without import errors
+- **Template Library**: Access pre-built templates for common contract types (ERC20, ERC721, Marketplaces, etc.)
 
-New Avalanche developers often struggle with:
-- Understanding complex Solidity code in existing contracts
-- Creating secure smart contracts without extensive boilerplate knowledge
-- Setting up and configuring deployment tools (Hardhat, AvalancheJS, RPC endpoints)
-- Manual deployment processes that are error-prone
+### Smart Contract Analysis
+- **Code Explanation**: Transform complex Solidity into plain English descriptions
+- **Security Audit Highlights**: Identify potential vulnerabilities and security concerns
+- **Gas Optimization Tips**: Suggestions for reducing transaction costs
+- **Best Practices Review**: Ensure adherence to Avalanche development standards
 
-## 💡 Solution
+### Deployment & Testing
+- **One-Click Deployment**: Deploy directly to Avalanche Fuji Testnet or C-Chain Mainnet
+- **MetaMask Integration**: Seamless wallet connection for transaction signing
+- **Network Configuration**: Pre-configured connection to Avalanche networks
+- **Transaction Monitoring**: Track contract deployment status in real-time
+- **Snowtrace Integration**: Instant access to blockchain explorer for verification
 
-Our AI-powered copilot streamlines the entire development workflow:
-
-### 1. Contract Explainer
-- **Input**: Solidity code or Avalanche contract address
-- **Process**: AI analyzes the code using Gemini AI
-- **Output**: Plain English explanation highlighting functions, permissions, and risks
-
-### 2. Contract Generator
-- **Input**: Natural language request (e.g., "Create an ERC-20 token with 1M supply")
-- **Process**: AI generates secure Solidity using Gemini AI with OpenZeppelin standards
-- **Output**: Clean, editable contract code in web editor
-
-### 3. Contract Deployment
-- **Input**: Generated or modified contract code
-- **Process**: Compiles with solc.js, deploys via ethers.js and MetaMask
-- **Output**: Contract address and Snowtrace explorer link
-
-## ✨ Features Added
-
-- **Contract Generation**: Create Solidity contracts from natural language prompts
-- **Contract Explanation**: Get detailed explanations of complex Solidity code
-- **Contract Deployment**: Deploy contracts directly to Avalanche networks
-- **MetaMask Integration**: Connect your wallet to sign and pay for deployment transactions
-- **Network Selection**: Choose between Fuji Testnet and Mainnet for deployment
-- **Snowtrace Explorer Integration**: View deployed contracts on the blockchain explorer
-- **OpenZeppelin Integration**: Use of vendored OpenZeppelin contracts for security and standardization
+### Advanced Features
+- **Gemini Contract Processing**: Automated fixing of AI-generated contracts
+- **Custom Contract Templates**: Save and reuse your contract designs
+- **Import Resolution**: Automatically handle OpenZeppelin dependencies
+- **Contract Verification**: Verify contract source code on Snowtrace
 
 ## 🏗️ System Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │    Backend      │    │  Blockchain     │
-│ (React/Next.js) │◄──►│   (Node.js)     │◄──►│   Avalanche     │
-│   + Tailwind    │    │   + Gemini AI   │    │  Fuji Testnet   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌─────────────────────┐    ┌────────────────────┐    ┌─────────────────┐
+│     Frontend        │    │     Backend        │    │   Blockchain    │
+│  (Next.js/React)    │◄──►│  (Express/Node.js) │◄──►│    Networks     │
+│                     │    │                    │    │                 │
+├─────────────────────┤    ├────────────────────┤    ├─────────────────┤
+│ • Contract Editor   │    │ • Google Gemini AI │    │ • Avalanche     │
+│ • MetaMask Connect  │    │ • Contract Fixer   │    │   Fuji Testnet  │
+│ • Deployment UI     │    │ • Solidity Compiler│    │ • Avalanche     │
+│ • Template Selector │    │ • Import Resolver  │    │   C-Chain       │
+└─────────────────────┘    └────────────────────┘    └─────────────────┘
 ```
 
-### Frontend Stack
-- **Framework**: React/Next.js
-- **Styling**: Tailwind CSS
-- **Blockchain Integration**: ethers.js, MetaMask
-- **Features**: Chat interface, code editor, deployment dashboard
+### Technology Stack
 
-### Backend Stack
-- **API**: Node.js/Express
-- **AI Integration**: Google Gemini AI
-- **Compilation**: solc.js
-- **Code Highlighting**: react-syntax-highlighter
+#### Frontend
+- **Framework**: Next.js with React
+- **UI Components**: Tailwind CSS
+- **Blockchain Connectivity**: ethers.js
+- **Wallet Integration**: MetaMask
+- **Code Editor**: React-based code editor with syntax highlighting
 
-### Blockchain Integration
-- **Network**: Avalanche Fuji Testnet and C-Chain Mainnet
-- **Explorer**: Snowtrace for transaction verification
-- **Standards**: OpenZeppelin for secure contract templates
+#### Backend
+- **Server**: Node.js with Express
+- **AI Integration**: Google Gemini API
+- **Contract Processing**: Custom processing pipeline for AI-generated contracts
+- **Compilation**: solc.js and Hardhat compilation engine
+- **Security**: Import sanitization and validation
 
-## 🛠️ API Endpoints
+#### Blockchain
+- **Networks**: Avalanche Fuji Testnet and C-Chain Mainnet
+- **Contract Standards**: ERC20, ERC721, ERC1155
+- **Libraries**: OpenZeppelin (local vendor approach)
+- **Explorer**: Snowtrace API integration
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/explain` | POST | Analyze and explain smart contract code |
-| `/api/generate` | POST | Generate Solidity contract from description |
-| `/api/deploy/compile` | POST | Compile contract and return ABI and bytecode |
+## � Development Workflow
 
-## 📱 Example Workflow
+### 1. Contract Generation
+Users describe their desired contract functionality in natural language, and the system:
+- Processes the request through Google's Gemini AI
+- Applies custom transformations to ensure compilation success
+- Inlines all necessary dependencies
+- Produces a complete, ready-to-deploy contract
 
-1. **Generate Contract**
-   ```
-   User: "Create an ERC-20 token named HackathonCoin with 1M supply"
-   System: AI generates → Displays Solidity in editor
-   ```
+### 2. Contract Analysis
+Upload existing contracts to:
+- Receive plain English explanations of functionality
+- Identify potential security issues
+- Understand gas optimization opportunities
+- Review against best practices
 
-2. **Explain Contract**
-   ```
-   User: Pastes complex Solidity code
-   System: AI analyzes → "This is an ERC-20 contract with mint/burn functions..."
-   ```
+### 3. Contract Deployment
+With a finalized contract, users can:
+- Connect their MetaMask wallet
+- Select target network (Testnet/Mainnet)
+- Deploy with a single click
+- Monitor transaction status
+- View deployed contract on Snowtrace
 
-3. **Deploy Contract**
-   ```
-   User: Connects MetaMask → Clicks "Deploy" button
-   System: Compiles → User signs transaction → "Contract deployed at 0xXYZ456. View on Snowtrace"
-   ```
+## 🌟 Unique Innovations
+
+### 1. AI Contract Processing Pipeline
+Our system implements a sophisticated multi-stage processing pipeline for AI-generated contracts:
+- **Pre-processing**: Cleans Markdown artifacts and formats code
+- **Dependency Analysis**: Identifies required OpenZeppelin contracts
+- **Dependency Resolution**: Inlines necessary code without imports
+- **Compiler Feedback Loop**: Uses compilation errors to guide fixes
+- **Post-processing**: Optimizes gas usage and improves readability
+
+### 2. Contract Pattern Recognition
+The platform includes an advanced pattern recognition system that:
+- Identifies common contract types (tokens, NFTs, marketplaces)
+- Suggests appropriate security features
+- Recommends established patterns for common functionality
+- Ensures compliance with Avalanche best practices
+
+### 3. OpenZeppelin Integration Strategy
+Unlike traditional import-based approaches, we implement:
+- Local vendor approach for core contracts
+- Dynamic inline resolution of dependencies
+- Consistent versioning across projects
+- Optimized code through selective inclusion
 
 ## 🚀 Getting Started
 
@@ -137,11 +153,11 @@ Our AI-powered copilot streamlines the entire development workflow:
    npm install
    ```
 
-### Starting the Application
+### Running the Application
 
 1. **Start the backend server**
    ```bash
-   # From the backend directory
+   cd backend
    node server.js
    ```
    The server will start on port 3001 (or the port specified in your .env file).
@@ -149,10 +165,12 @@ Our AI-powered copilot streamlines the entire development workflow:
 
 2. **Start the frontend development server**
    ```bash
-   # From the avalanche-frontend directory
+   cd avalanche-frontend
    npm run dev
    ```
-   The frontend will be available at [http://localhost:3000](http://localhost:3000)
+   
+3. **Access the application**
+   Open your browser and navigate to [http://localhost:3000](http://localhost:3000)
 
 ### Using the Application
 
@@ -199,21 +217,35 @@ Our AI-powered copilot streamlines the entire development workflow:
 - [Avalanche Faucet](https://faucet.avax.network/)
 - [OpenZeppelin Contracts](https://openzeppelin.com/contracts/)
 
-## 🏆 Project Status
+## 🔮 Future Roadmap
 
-This project has successfully implemented all core features including:
-- AI-powered contract generation
-- Detailed contract explanation
-- Direct deployment to Avalanche networks
+- **Contract Interaction Interface**: GUI for interacting with deployed contracts
+- **Contract Verification**: Automated verification on Snowtrace
+- **Advanced Template System**: Expanded library of contract templates
+- **Multi-contract Projects**: Support for complex multi-contract systems
+- **Gas Optimization Engine**: Advanced suggestions for gas efficiency
+- **Automated Testing**: Generation of unit tests for contracts
 
-Future enhancements could include:
-- Contract verification on Snowtrace
-- Contract interaction interface
-- Template library for common contract types
+## 🤝 Contributing
+
+We welcome contributions from the community! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🔗 Resources
+
+- [Avalanche Documentation](https://docs.avax.network/)
+- [Snowtrace Explorer](https://snowtrace.io/)
+- [Fuji Testnet Explorer](https://testnet.snowtrace.io/)
+- [Avalanche Faucet](https://faucet.avax.network/)
+- [OpenZeppelin Contracts](https://openzeppelin.com/contracts/)
+- [Google Gemini AI](https://ai.google.dev/docs)
 
 ---
 
-**Built with ❤️ for the Avalanche community**
+**Built with ❤️ for the Avalanche developer community**
 
 ## 🚀 Getting Started
 
