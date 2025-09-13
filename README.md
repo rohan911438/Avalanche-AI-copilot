@@ -233,6 +233,7 @@ We welcome contributions from the community! Please see our [Contributing Guide]
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Copyright (c) 2025 Rohan Kumar ([@rohan911438](https://github.com/rohan911438)).
 
 ## 🔗 Resources
 
@@ -242,116 +243,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Avalanche Faucet](https://faucet.avax.network/)
 - [OpenZeppelin Contracts](https://openzeppelin.com/contracts/)
 - [Google Gemini AI](https://ai.google.dev/docs)
-
----
-
-**Built with ❤️ for the Avalanche developer community**
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js (v18+)
-- Google Gemini API key
-- MetaMask browser extension for deployment
-- AVAX tokens for deployment (use the [Avalanche Faucet](https://faucet.avax.network/) for Fuji Testnet)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/rohan911438/Avalanche-AI-copilot.git
-   cd Avalanche-AI-copilot
-   ```
-
-2. **Install backend dependencies**
-   ```bash
-   cd backend
-   npm install
-   ```
-
-3. **Configure backend environment variables**
-   ```bash
-   # Create/edit .env file in the backend directory
-   GEMINI_API_KEY=your_gemini_api_key
-   PORT=3001
-   ```
-
-4. **Install frontend dependencies**
-   ```bash
-   cd ../avalanche-frontend
-   npm install
-   ```
-
-### Starting the Application
-
-1. **Start the backend server**
-   ```bash
-   # From the backend directory
-   node server.js
-   ```
-   The server will start on port 3001 (or the port specified in your .env file).
-   You should see: "🚀 Server running on port 3001"
-
-   **If using PowerShell with Execution Policy restrictions:**
-   ```powershell
-   # Run PowerShell as Administrator first and execute:
-   Set-ExecutionPolicy RemoteSigned
-   ```
-   Or use Command Prompt instead and run:
-   ```cmd
-   node "full\path\to\server.js"
-   ```
-
-2. **Start the frontend development server**
-   ```bash
-   # From the avalanche-frontend directory
-   npm run dev
-   ```
-   The frontend will be available at [http://localhost:3000](http://localhost:3000)
-
-   **If using PowerShell with Execution Policy restrictions:**
-   Use Command Prompt instead and run the same command.
-
-### Using the Application
-
-1. **Generate a Contract**:
-   - Navigate to the "Generate" tab
-   - Enter a description of the contract you want to create
-   - Click "Generate Contract"
-
-2. **Explain a Contract**:
-   - Navigate to the "Explain" tab
-   - Paste the Solidity code you want to analyze
-   - Click "Explain Contract"
-
-3. **Deploy a Contract**:
-   - Navigate to the "Deploy" tab
-   - Ensure you have a contract ready (either generated or pasted)
-   - Connect your MetaMask wallet
-   - Select the network (Fuji Testnet recommended for testing)
-   - Click "Compile Contract" and then "Deploy to Avalanche"
-   - Confirm the transaction in MetaMask
-   - View your deployed contract on Snowtrace
-
-### Troubleshooting
-
-**Backend won't start**:
-- Ensure you have installed all dependencies: `npm install`
-- Verify your .env file contains the required GEMINI_API_KEY
-- Check if the port is already in use
-
-**Frontend npm commands fail**:
-- If using PowerShell with Execution Policy restrictions, try using Command Prompt instead
-- Or run PowerShell as Administrator and execute: `Set-ExecutionPolicy RemoteSigned`
-
-**MetaMask Connection Issues**:
-- Ensure MetaMask is installed and unlocked
-- Add Avalanche networks to MetaMask if they aren't already configured
-
-**Deployment Errors**:
-- For Fuji Testnet: Make sure you have testnet AVAX from the faucet
-- Check compilation errors in the console
-- Verify you're on the correct network in MetaMask
+- [OpenZeppelin in Avalanche Copilot](OPENZEPPELIN_CONTRACTS.md)
 
 ## 🔧 Configuration for MetaMask
 
@@ -375,30 +267,6 @@ Currency Symbol: AVAX
 Block Explorer URL: https://snowtrace.io/
 ```
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🔗 Links
-
-- [Avalanche Documentation](https://docs.avax.network/)
-- [Snowtrace Explorer](https://snowtrace.io/)
-- [Fuji Testnet Explorer](https://testnet.snowtrace.io/)
-- [Avalanche Faucet](https://faucet.avax.network/)
-- [OpenZeppelin Contracts](https://openzeppelin.com/contracts/)
-- [Google Gemini AI](https://ai.google.dev/docs)
-- [OpenZeppelin in Avalanche Copilot](OPENZEPPELIN_CONTRACTS.md)
-
 ---
 
-**Built with ❤️ for the Avalanche community**
+**Built with ❤️ by Rohan Kumar ([@rohan911438](https://github.com/rohan911438)) for the Avalanche developer community**
