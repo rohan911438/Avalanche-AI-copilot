@@ -2,15 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { Loader, AlertCircle, Check, ExternalLink } from 'lucide-react'
+import { ethers } from 'ethers'
 
 export default function ContractDeployer({ contractCode, API_BASE_URL }) {
   const [network, setNetwork] = useState('fuji')
-  const [deploymentStatus, setDeploymentStatus] = useState('idle') // idle, compiling, deploying, success, error
+  const [deploymentStatus, setDeploymentStatus] = useState('idle') // idle, compiling, estimating, deploying, success, error
   const [error, setError] = useState('')
   const [deployedAddress, setDeployedAddress] = useState('')
   const [walletConnected, setWalletConnected] = useState(false)
   const [currentAccount, setCurrentAccount] = useState('')
   const [compiledContract, setCompiledContract] = useState(null)
+  const [gasEstimate, setGasEstimate] = useState(null) // { gas, gasPrice, totalCost }
 
   // Check if MetaMask is installed and wallet is connected
   useEffect(() => {
@@ -151,6 +153,68 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
     }
   }
 
+  // Estimate the gas needed for deployment
+  const estimateGas = async () => {
+    try {
+      if (!walletConnected) {
+        await connectWallet()
+      }
+      
+      // Check if we have the compiled contract or need to compile it
+      let compiledData = compiledContract
+      if (!compiledData) {
+        compiledData = await compileContract()
+        if (!compiledData) return null // Compilation failed
+      }
+      
+      // Make sure we're on the right network
+      const networkOk = await checkAndSwitchNetwork()
+      if (!networkOk) return null
+      
+      setDeploymentStatus('estimating')
+      setError('')
+      
+      // Initialize ethers.js provider and signer
+      const provider = new ethers.providers.Web3Provider(window.ethereum)
+      const signer = provider.getSigner()
+      
+      // Create a contract factory for estimation
+      const factory = new ethers.ContractFactory(
+        compiledData.abi, 
+        compiledData.bytecode,
+        signer
+      )
+      
+      // Get current gas price
+      const gasPrice = await provider.getGasPrice()
+      
+      // Estimate the gas limit for deployment
+      const deploymentData = factory.getDeployTransaction()
+      const estimatedGas = await provider.estimateGas(deploymentData)
+      
+      // Calculate total cost in AVAX
+      const totalWei = gasPrice.mul(estimatedGas)
+      const totalAvax = ethers.utils.formatEther(totalWei)
+      
+      const estimateData = {
+        gas: estimatedGas.toString(),
+        gasPrice: ethers.utils.formatUnits(gasPrice, 'gwei'),
+        totalCost: totalAvax,
+        totalWei: totalWei.toString()
+      }
+      
+      setGasEstimate(estimateData)
+      setDeploymentStatus('ready')
+      
+      return estimateData
+    } catch (error) {
+      console.error('Error estimating gas:', error)
+      setError(`Gas estimation failed: ${error.message}`)
+      setDeploymentStatus('error')
+      return null
+    }
+  }
+
   // Deploy the contract to the Avalanche network
   const deployContract = async () => {
     try {
@@ -169,14 +233,22 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
       const networkOk = await checkAndSwitchNetwork()
       if (!networkOk) return
       
+      // Estimate gas if not already estimated
+      if (!gasEstimate) {
+        const estimateData = await estimateGas()
+        if (!estimateData) return // Gas estimation failed
+        
+        // Add confirmation step here if needed
+      }
+      
       setDeploymentStatus('deploying')
       
       // Initialize ethers.js provider and signer
-      const provider = new window.ethers.providers.Web3Provider(window.ethereum)
+      const provider = new ethers.providers.Web3Provider(window.ethereum)
       const signer = provider.getSigner()
       
       // Create a contract factory for deployment
-      const factory = new window.ethers.ContractFactory(
+      const factory = new ethers.ContractFactory(
         compiledData.abi, 
         compiledData.bytecode,
         signer
@@ -271,7 +343,7 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
       <div className="space-y-2">
         <button
           onClick={compileContract}
-          disabled={!contractCode || deploymentStatus === 'compiling' || deploymentStatus === 'deploying'}
+          disabled={!contractCode || deploymentStatus === 'compiling' || deploymentStatus === 'estimating' || deploymentStatus === 'deploying'}
           className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors mb-2"
         >
           {deploymentStatus === 'compiling' ? (
@@ -285,8 +357,23 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
         </button>
         
         <button
+          onClick={estimateGas}
+          disabled={!walletConnected || !contractCode || deploymentStatus === 'compiling' || deploymentStatus === 'estimating' || deploymentStatus === 'deploying'}
+          className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors mb-2"
+        >
+          {deploymentStatus === 'estimating' ? (
+            <span className="flex items-center justify-center">
+              <Loader className="w-4 h-4 animate-spin mr-2" />
+              Estimating Gas...
+            </span>
+          ) : (
+            'Estimate Deployment Cost'
+          )}
+        </button>
+        
+        <button
           onClick={deployContract}
-          disabled={!walletConnected || !contractCode || deploymentStatus === 'compiling' || deploymentStatus === 'deploying'}
+          disabled={!walletConnected || !contractCode || deploymentStatus === 'compiling' || deploymentStatus === 'estimating' || deploymentStatus === 'deploying'}
           className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors"
         >
           {deploymentStatus === 'deploying' ? (
@@ -299,6 +386,26 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
           )}
         </button>
       </div>
+      
+      {/* Gas Estimate Display */}
+      {gasEstimate && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-sm font-medium text-blue-800 mb-2">Estimated Deployment Cost</h3>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="text-gray-700">Gas Limit:</div>
+            <div className="font-mono text-gray-900">{parseInt(gasEstimate.gas).toLocaleString()} units</div>
+            
+            <div className="text-gray-700">Gas Price:</div>
+            <div className="font-mono text-gray-900">{parseFloat(gasEstimate.gasPrice).toFixed(2)} Gwei</div>
+            
+            <div className="text-gray-700 font-medium">Total Cost:</div>
+            <div className="font-mono text-gray-900 font-medium">{parseFloat(gasEstimate.totalCost).toFixed(6)} AVAX</div>
+          </div>
+          <p className="mt-2 text-xs text-gray-600">
+            Note: Actual gas usage may vary slightly during deployment.
+          </p>
+        </div>
+      )}
 
       {/* Error Message */}
       {error && (
@@ -338,6 +445,7 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
           <li>Select the Avalanche network (Fuji Testnet recommended for testing)</li>
           <li>Connect your MetaMask wallet</li>
           <li>Compile your contract using our backend service</li>
+          <li>Estimate the gas cost to preview deployment expenses</li>
           <li>Deploy to the selected Avalanche network</li>
           <li>View and interact with your contract on Snowtrace</li>
         </ol>
