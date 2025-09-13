@@ -338,37 +338,69 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
     })
   }
 
-  // Compile the contract using our backend
+  // Compile the contract using our enhanced frontend API endpoint with import resolution
   const compileContract = async () => {
     try {
       setDeploymentStatus('compiling')
       setError('')
       
-      const response = await fetch(`${API_BASE_URL}/api/deploy/compile`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ contractCode })
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to compile contract')
+      // First try the new API endpoint with import resolution
+      try {
+        const response = await fetch('/api/compile-with-imports', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ contractCode })
+        })
+        
+        if (!response.ok) {
+          // If the new endpoint fails, we'll fall back to the old one
+          throw new Error('New compilation endpoint failed')
+        }
+        
+        const data = await response.json()
+        
+        // Parse constructor inputs from ABI
+        const inputs = parseConstructorInputs(data.abi)
+        setConstructorInputs(inputs)
+        
+        // Initialize constructor arguments
+        setConstructorArgs(initializeConstructorArgs(inputs))
+        
+        setCompiledContract(data)
+        setDeploymentStatus('ready')
+        return data
+      } catch (frontendError) {
+        console.log("Frontend compilation failed, falling back to backend:", frontendError)
+        
+        // Fallback to the original backend endpoint
+        const response = await fetch(`${API_BASE_URL}/api/deploy/compile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ contractCode })
+        })
+        
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Failed to compile contract')
+        }
+        
+        const data = await response.json()
+        
+        // Parse constructor inputs from ABI
+        const inputs = parseConstructorInputs(data.abi)
+        setConstructorInputs(inputs)
+        
+        // Initialize constructor arguments
+        setConstructorArgs(initializeConstructorArgs(inputs))
+        
+        setCompiledContract(data)
+        setDeploymentStatus('ready')
+        return data
       }
-      
-      const data = await response.json()
-      
-      // Parse constructor inputs from ABI
-      const inputs = parseConstructorInputs(data.abi)
-      setConstructorInputs(inputs)
-      
-      // Initialize constructor arguments
-      setConstructorArgs(initializeConstructorArgs(inputs))
-      
-      setCompiledContract(data)
-      setDeploymentStatus('ready')
-      return data
     } catch (error) {
       console.error('Error compiling contract:', error)
       setError(`Compilation error: ${error.message}`)
@@ -597,12 +629,67 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
         setDeploymentStatus('error')
         return
       }
-      const signer = provider.getSigner()
+      
+      // Validate provider connection
+      try {
+        const network = await provider.getNetwork()
+        console.log('Connected to network:', network.name, `(chainId: ${network.chainId})`)
+      } catch (networkError) {
+        console.error('Network connection error:', networkError)
+        setError('Failed to connect to network. Please check your internet connection and try again.')
+        setDeploymentStatus('error')
+        return
+      }
+      
+      // Get signer and verify account access
+      let signer
+      try {
+        signer = provider.getSigner()
+        const signerAddress = await signer.getAddress()
+        console.log('Using signer with address:', signerAddress)
+        
+        // Check if signer has funds
+        const balance = await provider.getBalance(signerAddress)
+        console.log('Signer balance:', ethers.utils.formatEther(balance), 'AVAX')
+        
+        if (balance.isZero()) {
+          console.warn('Warning: Signer has zero balance')
+        }
+      } catch (signerError) {
+        console.error('Signer error:', signerError)
+        setError('Failed to access your wallet. Please make sure MetaMask is unlocked and you have granted permission.')
+        setDeploymentStatus('error')
+        return
+      }
       
       // Create a contract factory for deployment
+      // First ensure the ABI is properly formatted
+      let abi = compiledData.abi;
+      if (typeof abi === 'string') {
+        try {
+          abi = JSON.parse(abi);
+        } catch (parseError) {
+          console.error('Error parsing ABI string:', parseError);
+          throw new Error('Invalid ABI format. Could not parse ABI JSON.');
+        }
+      }
+      
+      // Ensure bytecode format is correct (should start with 0x)
+      let bytecode = compiledData.bytecode;
+      if (bytecode && !bytecode.startsWith('0x')) {
+        bytecode = '0x' + bytecode;
+      }
+      
+      // Log the factory inputs for debugging
+      console.log('Contract factory setup:');
+      console.log('- ABI type:', typeof abi);
+      console.log('- ABI is array:', Array.isArray(abi));
+      console.log('- ABI length:', Array.isArray(abi) ? abi.length : 'N/A');
+      console.log('- Bytecode length:', bytecode.length);
+      
       const factory = new ethers.ContractFactory(
-        compiledData.abi, 
-        compiledData.bytecode,
+        abi,
+        bytecode,
         signer
       )
       
@@ -615,23 +702,101 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
       // Deploy the contract with constructor arguments if needed
       console.log(`Deploying contract with args:`, args.length > 0 ? args : 'No constructor args')
       
-      const contract = constructorArgs.length > 0 
-        ? await factory.deploy(...args)
-        : await factory.deploy()
+      // Add more detailed logging
+      console.log('ABI:', JSON.stringify(compiledData.abi).substring(0, 200) + '...');
+      console.log('Bytecode length:', compiledData.bytecode.length);
       
-      // Wait for deployment to finish
-      console.log(`Deploying contract...`)
-      await contract.deployed()
-      
-      // Success! Update the state with deployed address
-      setDeployedAddress(contract.address)
-      setDeploymentStatus('success')
-      console.log(`Contract deployed at: ${contract.address}`)
+      try {
+        // Create deployment transaction
+        const deployTransaction = constructorArgs.length > 0 
+          ? await factory.getDeployTransaction(...args)
+          : await factory.getDeployTransaction();
+        
+        // Make sure we have an appropriate gas limit
+        // If not provided by ethers, estimate it or set a safe default
+        if (!deployTransaction.gasLimit) {
+          try {
+            // Try to estimate gas
+            const estimatedGas = await provider.estimateGas({
+              from: await signer.getAddress(),
+              data: deployTransaction.data
+            });
+            
+            // Add 20% buffer to estimated gas
+            const gasWithBuffer = estimatedGas.mul(120).div(100);
+            deployTransaction.gasLimit = gasWithBuffer;
+            console.log('Estimated gas with 20% buffer:', gasWithBuffer.toString());
+          } catch (gasEstError) {
+            console.error('Gas estimation error:', gasEstError);
+            
+            // Set a reasonable default gas limit if estimation fails
+            deployTransaction.gasLimit = ethers.BigNumber.from('5000000'); // 5 million gas
+            console.log('Using default gas limit:', deployTransaction.gasLimit.toString());
+          }
+        }
+        
+        console.log('Gas limit for deployment:', deployTransaction.gasLimit.toString());
+        
+        // Explicitly set gas price (important for some test networks)
+        if (!deployTransaction.gasPrice) {
+          try {
+            const currentGasPrice = await provider.getGasPrice();
+            // Use slightly higher gas price (10% more) to ensure faster confirmation
+            deployTransaction.gasPrice = currentGasPrice.mul(110).div(100);
+            console.log('Using gas price:', ethers.utils.formatUnits(deployTransaction.gasPrice, 'gwei'), 'gwei');
+          } catch (gasPriceError) {
+            console.error('Error getting gas price:', gasPriceError);
+          }
+        }
+        
+        // Send the transaction
+        console.log('Sending deployment transaction...');
+        const tx = await signer.sendTransaction(deployTransaction);
+        console.log('Transaction sent:', tx.hash);
+        
+        // Wait for transaction confirmation
+        console.log('Waiting for transaction confirmation...');
+        const receipt = await tx.wait(1); // Wait for 1 confirmation
+        
+        if (!receipt.contractAddress) {
+          throw new Error('No contract address in transaction receipt');
+        }
+        
+        // Success! Update the state with deployed address
+        setDeployedAddress(receipt.contractAddress);
+        setDeploymentStatus('success');
+        console.log(`Contract deployed at: ${receipt.contractAddress}`);
+      } catch (txError) {
+        console.error('Transaction error:', txError);
+        throw txError; // Re-throw to be caught by the outer try/catch
+      }
       
     } catch (error) {
       console.error('Error deploying contract:', error)
-      setError(`Deployment failed: ${error.message}`)
-      setDeploymentStatus('error')
+      
+      // Enhanced error handling with more details
+      let errorMessage = 'Deployment failed';
+      
+      if (error.message) {
+        errorMessage += `: ${error.message}`;
+      }
+      
+      if (error.code) {
+        errorMessage += ` (Code: ${error.code})`;
+      }
+      
+      // Handle specific MetaMask errors
+      if (error.code === 4001) {
+        errorMessage = 'Transaction rejected by user';
+      } else if (error.code === -32603) {
+        errorMessage = 'Internal JSON-RPC error. Check if you have enough AVAX for gas';
+      }
+      
+      // Log the full error object for debugging
+      console.log('Detailed error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      
+      setError(errorMessage);
+      setDeploymentStatus('error');
     }
   }
 
@@ -644,30 +809,64 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
   
   // Parse constructor arguments to appropriate types for contract deployment
   const parseConstructorArgValues = () => {
-    return constructorArgs.map(arg => {
-      // Handle different types of arguments
-      if (arg.type.includes('int')) {
-        // For integer types
-        return arg.value // ethers.js will handle the conversion
-      } else if (arg.type === 'bool') {
-        // For boolean types
-        return arg.value === 'true'
-      } else if (arg.type === 'address') {
-        // For address types
-        return arg.value
-      } else if (arg.type.includes('[]')) {
-        // For array types, parse the JSON
-        try {
-          return JSON.parse(arg.value)
-        } catch (e) {
-          console.error(`Failed to parse array value for ${arg.name}:`, e)
-          return []
+    const parsedArgs = [];
+    
+    for (let i = 0; i < constructorArgs.length; i++) {
+      const arg = constructorArgs[i];
+      console.log(`Parsing arg ${i} (${arg.name}): type=${arg.type}, value=${arg.value}`);
+      
+      try {
+        // Handle different types of arguments
+        if (arg.type.includes('int')) {
+          // For integer types, ensure they're valid numbers
+          if (arg.value === '' || isNaN(arg.value)) {
+            throw new Error(`Invalid integer value for ${arg.name}`);
+          }
+          
+          // For uint types, ensure they're non-negative
+          if (arg.type.startsWith('uint') && parseInt(arg.value) < 0) {
+            throw new Error(`Value for ${arg.name} must be non-negative`);
+          }
+          
+          // Use ethers.js BigNumber for safer handling of large integers
+          parsedArgs.push(ethers.BigNumber.from(arg.value.toString()));
+        } 
+        else if (arg.type === 'bool') {
+          // For boolean types
+          parsedArgs.push(arg.value === 'true');
+        } 
+        else if (arg.type === 'address') {
+          // For address types, validate the address format
+          if (!ethers.utils.isAddress(arg.value)) {
+            throw new Error(`Invalid Ethereum address for ${arg.name}`);
+          }
+          parsedArgs.push(arg.value);
+        } 
+        else if (arg.type.includes('[]')) {
+          // For array types, parse the JSON and validate
+          try {
+            const arrayValue = JSON.parse(arg.value);
+            if (!Array.isArray(arrayValue)) {
+              throw new Error(`Value for ${arg.name} must be an array`);
+            }
+            parsedArgs.push(arrayValue);
+          } catch (e) {
+            throw new Error(`Failed to parse array value for ${arg.name}: ${e.message}`);
+          }
+        } 
+        else {
+          // For string and other types
+          parsedArgs.push(arg.value);
         }
-      } else {
-        // For string and other types
-        return arg.value
+        
+        console.log(`Successfully parsed ${arg.name} to:`, parsedArgs[parsedArgs.length - 1]);
+      } catch (error) {
+        console.error(`Error parsing constructor argument ${arg.name}:`, error);
+        throw new Error(`Invalid value for constructor argument ${arg.name}: ${error.message}`);
       }
-    })
+    }
+    
+    return parsedArgs;
   }
   
   // Check if user has sufficient balance for deployment
@@ -954,9 +1153,23 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
 
       {/* Error Message */}
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-3">
-          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-          <p className="text-red-700 text-sm">{error}</p>
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-start space-x-3 mb-2">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-red-700 text-sm font-medium">{error}</p>
+          </div>
+          
+          {/* Common troubleshooting tips */}
+          <div className="ml-8 mt-2">
+            <p className="text-sm text-red-600 font-medium">Troubleshooting tips:</p>
+            <ul className="list-disc list-inside text-xs text-red-600 mt-1 space-y-1">
+              <li>Make sure you're connected to the correct network (Avalanche Fuji)</li>
+              <li>Verify that your wallet has enough AVAX for gas fees</li>
+              <li>Check that all constructor arguments are correctly formatted</li>
+              <li>For complex contracts, try increasing gas limit</li>
+              <li>If you received a transaction error, check your MetaMask activity for details</li>
+            </ul>
+          </div>
         </div>
       )}
 

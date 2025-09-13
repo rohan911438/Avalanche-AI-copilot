@@ -1,4 +1,14 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Avalanche AI Copilot - Frontend
+
+This Next.js application serves as the frontend for the Avalanche AI Copilot platform, allowing users to generate, explain, and deploy smart contracts using AI assistance.
+
+## Features
+
+- Smart contract generation using Google Gemini AI
+- Contract explanation and analysis
+- Contract compilation with OpenZeppelin dependency resolution
+- Deployment to the Avalanche Fuji testnet
+- Integration with MetaMask for transaction signing
 
 ## Getting Started
 
@@ -10,27 +20,42 @@ npm run dev
 yarn dev
 # or
 pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## OpenZeppelin Contract Support
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The application includes built-in support for common OpenZeppelin contracts:
 
-## Learn More
+- Ownable
+- ReentrancyGuard
+- Pausable
 
-To learn more about Next.js, take a look at the following resources:
+When a contract includes imports like `import "./Ownable.sol";`, the system automatically inlines the required OpenZeppelin code during compilation. This eliminates the need for manual dependency management.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### How it works
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. The application detects OpenZeppelin imports in your contract
+2. It automatically inlines the necessary dependencies
+3. The combined code is sent for compilation
+4. If there's any issue with the frontend compilation, it falls back to the backend compiler
 
-## Deploy on Vercel
+## Environment Setup
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Create a `.env.local` file with the following variables:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+GEMINI_API_KEY=your_gemini_api_key
+BACKEND_URL=http://localhost:3001 (or your backend URL)
+```
+
+## Deploying to Vercel
+
+This application is optimized for deployment on Vercel:
+
+1. Connect your GitHub repository to Vercel
+2. Configure the environment variables in the Vercel dashboard
+3. Deploy!
+
+All API routes are compatible with Vercel's serverless functions architecture.

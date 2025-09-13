@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "buildCommand": "cd avalanche-frontend && npm run build",
+  "outputDirectory": "avalanche-frontend/.next",
+  "installCommand": "cd avalanche-frontend && npm install",
+  "framework": "nextjs",
+  "env": {
+    "GEMINI_API_KEY": "@gemini_api_key",
+    "BACKEND_URL": "@backend_url",
+    "NODE_ENV": "production"
+  }
+}
