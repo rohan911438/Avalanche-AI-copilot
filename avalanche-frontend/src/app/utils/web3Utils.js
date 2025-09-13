@@ -65,17 +65,49 @@ export const removeMetaMaskListener = (event, handler) => {
  * @returns {Promise<{wei: string, avax: string}>} Balance in wei and AVAX
  */
 export const getAvaxBalance = async (account) => {
-  if (!account || !isMetaMaskAvailable()) {
+  if (!account) {
+    console.warn('getAvaxBalance: No account provided');
+    return null;
+  }
+  
+  if (!isMetaMaskAvailable()) {
+    console.warn('getAvaxBalance: MetaMask is not available');
     return null;
   }
   
   try {
+    console.log('Getting AVAX balance for account:', account);
+    
+    // Get provider with retry logic
     const provider = getProvider();
-    if (!provider) return null;
+    if (!provider) {
+      console.error('getAvaxBalance: Failed to get provider');
+      
+      // Try one more time with a delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const retryProvider = getProvider();
+      if (!retryProvider) {
+        console.error('getAvaxBalance: Failed to get provider on retry');
+        return null;
+      }
+      
+      // Successfully got provider on retry
+      const balanceWei = await retryProvider.getBalance(account);
+      const balanceAvax = ethers.utils.formatEther(balanceWei);
+      
+      console.log('getAvaxBalance (retry): Got balance:', balanceAvax, 'AVAX');
+      
+      return {
+        wei: balanceWei.toString(),
+        avax: balanceAvax
+      };
+    }
     
     // Use a direct call to avoid potential issues
     const balanceWei = await provider.getBalance(account);
     const balanceAvax = ethers.utils.formatEther(balanceWei);
+    
+    console.log('getAvaxBalance: Got balance:', balanceAvax, 'AVAX');
     
     return {
       wei: balanceWei.toString(),
@@ -83,6 +115,31 @@ export const getAvaxBalance = async (account) => {
     };
   } catch (error) {
     console.error('Error getting AVAX balance:', error);
-    return null;
+    
+    // Try an alternative approach as last resort
+    try {
+      console.log('Trying alternative approach to get balance');
+      const ethereum = window.ethereum;
+      if (!ethereum) return null;
+      
+      const result = await ethereum.request({
+        method: 'eth_getBalance',
+        params: [account, 'latest']
+      });
+      
+      // Convert hex balance to decimal
+      const balanceWei = ethers.BigNumber.from(result);
+      const balanceAvax = ethers.utils.formatEther(balanceWei);
+      
+      console.log('getAvaxBalance (alternative): Got balance:', balanceAvax, 'AVAX');
+      
+      return {
+        wei: balanceWei.toString(),
+        avax: balanceAvax
+      };
+    } catch (fallbackError) {
+      console.error('Error in alternative balance check:', fallbackError);
+      return null;
+    }
   }
 };

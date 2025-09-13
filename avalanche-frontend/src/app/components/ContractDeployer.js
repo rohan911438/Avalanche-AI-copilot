@@ -123,16 +123,40 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
   
   // Fetch and check the user's AVAX balance
   const checkAvaxBalance = async (account) => {
-    if (!account) return
+    if (!account) {
+      console.warn('Cannot check balance: No account provided')
+      return null
+    }
     
     try {
       setBalanceCheckStatus('checking')
+      console.log('Checking AVAX balance for account:', account)
       
       // Use our utility function to get balance
       const balance = await getAvaxBalance(account)
       
       if (balance) {
+        console.log('AVAX balance fetched successfully:', balance)
         setAvaxBalance(balance)
+      } else {
+        console.warn('Failed to get AVAX balance, using direct provider approach')
+        
+        // Direct approach as fallback
+        const provider = getProvider()
+        if (provider) {
+          const balanceWei = await provider.getBalance(account)
+          const balanceAvax = ethers.utils.formatEther(balanceWei)
+          
+          const directBalance = {
+            wei: balanceWei.toString(),
+            avax: balanceAvax
+          }
+          
+          console.log('Balance from direct call:', directBalance)
+          setAvaxBalance(directBalance)
+          setBalanceCheckStatus('idle')
+          return directBalance
+        }
       }
       
       setBalanceCheckStatus('idle')
@@ -381,7 +405,19 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
         setDeploymentStatus('error')
         return null
       }
+      
+      // Get current account to make sure we're using the correct one
+      const accounts = await provider.listAccounts()
+      if (!accounts || accounts.length === 0) {
+        setError('No accounts found in MetaMask. Please unlock your wallet.')
+        setDeploymentStatus('error')
+        return null
+      }
+      
       const signer = provider.getSigner()
+      
+      // Log for debugging
+      console.log('Using signer address:', await signer.getAddress())
       
       // Create a contract factory for estimation
       const factory = new ethers.ContractFactory(
@@ -390,25 +426,99 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
         signer
       )
       
-      // Get current gas price
-      const gasPrice = await provider.getGasPrice()
+      // Get current gas price with fallback
+      let gasPrice
+      try {
+        gasPrice = await provider.getGasPrice()
+        console.log('Raw gas price from provider:', gasPrice.toString())
+        
+        // Ensure minimum gas price (Avalanche typically requires at least 25 Gwei)
+        const minGasPrice = ethers.utils.parseUnits('25', 'gwei')
+        if (gasPrice.lt(minGasPrice) || gasPrice.isZero()) {
+          console.log('Gas price too low, using minimum 25 Gwei instead')
+          gasPrice = minGasPrice
+        }
+      } catch (gasPriceError) {
+        console.error('Error getting gas price:', gasPriceError)
+        // Use a default gas price for Avalanche Fuji if fetching fails
+        gasPrice = ethers.utils.parseUnits('25', 'gwei')
+      }
+      
+      console.log('Gas price (adjusted if needed):', ethers.utils.formatUnits(gasPrice, 'gwei'), 'Gwei')
       
       // Parse constructor arguments if any
       let args = []
       if (constructorArgs.length > 0) {
         args = parseConstructorArgValues()
+        console.log('Constructor args:', args)
       }
       
       // Estimate the gas limit for deployment with constructor args if needed
-      const deploymentData = constructorArgs.length > 0 
-        ? factory.getDeployTransaction(...args)
-        : factory.getDeployTransaction()
+      let deploymentData
+      let estimatedGas
       
-      const estimatedGas = await provider.estimateGas(deploymentData)
+      try {
+        // First try with getDeployTransaction
+        deploymentData = constructorArgs.length > 0 
+          ? factory.getDeployTransaction(...args)
+          : factory.getDeployTransaction()
+        
+        console.log('Deployment data created successfully')
+        estimatedGas = await provider.estimateGas(deploymentData)
+      } catch (estimateError) {
+        console.error('Error in first estimation attempt:', estimateError)
+        
+        // Try alternative approach with direct estimateGas on factory
+        try {
+          estimatedGas = constructorArgs.length > 0
+            ? await factory.estimateGas.deploy(...args)
+            : await factory.estimateGas.deploy()
+            
+          console.log('Estimated gas using factory.estimateGas:', estimatedGas.toString())
+        } catch (fallbackError) {
+          console.error('Error in fallback estimation:', fallbackError)
+          setError(`Gas estimation failed: ${fallbackError.message}. Check your contract and constructor arguments.`)
+          setDeploymentStatus('error')
+          return null
+        }
+      }
+      
+      console.log('Estimated gas units:', estimatedGas.toString())
       
       // Calculate total cost in AVAX
       const totalWei = gasPrice.mul(estimatedGas)
       const totalAvax = ethers.utils.formatEther(totalWei)
+      
+      console.log('Gas price in wei:', gasPrice.toString())
+      console.log('Gas limit:', estimatedGas.toString())
+      console.log('Total wei:', totalWei.toString())
+      console.log('Estimated cost in AVAX:', totalAvax)
+      
+      // Double-check calculation to ensure non-zero values
+      if (totalWei.isZero() || Number(totalAvax) === 0) {
+        console.warn('Total cost calculation resulted in zero - using fallback calculation')
+        
+        // Fallback calculation using minimum gas price (25 Gwei)
+        const minGasPrice = ethers.utils.parseUnits('25', 'gwei')
+        const fallbackTotalWei = minGasPrice.mul(estimatedGas)
+        const fallbackTotalAvax = ethers.utils.formatEther(fallbackTotalWei)
+        
+        console.log('Fallback calculation:')
+        console.log('- Min gas price: 25 Gwei')
+        console.log('- Gas limit:', estimatedGas.toString())
+        console.log('- Fallback total wei:', fallbackTotalWei.toString())
+        console.log('- Fallback total AVAX:', fallbackTotalAvax)
+        
+        const estimateData = {
+          gas: estimatedGas.toString(),
+          gasPrice: '25',  // Fixed at 25 Gwei minimum
+          totalCost: fallbackTotalAvax,
+          totalWei: fallbackTotalWei.toString()
+        }
+        
+        setGasEstimate(estimateData)
+        return estimateData
+      }
       
       const estimateData = {
         gas: estimatedGas.toString(),
@@ -450,26 +560,34 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
       const networkOk = await checkAndSwitchNetwork()
       if (!networkOk) return
       
-      // Estimate gas if not already estimated
-      if (!gasEstimate) {
-        const estimateData = await estimateGas()
-        if (!estimateData) return // Gas estimation failed
+      // Always re-estimate gas for latest data
+      console.log('Estimating gas for deployment...')
+      const estimateData = await estimateGas()
+      if (!estimateData) {
+        console.error('Gas estimation failed before deployment')
+        return // Gas estimation failed
       }
       
+      console.log('Updated gas estimate:', estimateData)
+      
       // Check if user has sufficient balance
+      console.log('Checking balance sufficiency before deployment...')
       const isBalanceSufficient = await checkBalanceSufficiency()
+      console.log('Balance sufficient?', isBalanceSufficient)
       
       // If balance is insufficient, show warning but allow user to proceed
-      if (!isBalanceSufficient) {
+      if (!isBalanceSufficient && avaxBalance) {
         const shouldProceed = window.confirm(
           `Warning: Your AVAX balance (${Number(avaxBalance.avax).toFixed(6)} AVAX) may not be sufficient for this deployment. The estimated cost is ${Number(gasEstimate.totalCost).toFixed(6)} AVAX. Do you want to proceed anyway?`
         )
         
         if (!shouldProceed) {
+          console.log('User chose not to proceed with deployment due to insufficient balance')
           return // User chose not to proceed
         }
       }
       
+      console.log('Starting deployment...')
       setDeploymentStatus('deploying')
       
       // Initialize ethers.js provider and signer
@@ -554,31 +672,47 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
   
   // Check if user has sufficient balance for deployment
   const checkBalanceSufficiency = async () => {
-    if (!gasEstimate || !avaxBalance) {
-      // If we don't have both gas estimate and balance, refresh balance
-      if (currentAccount) {
-        await checkAvaxBalance(currentAccount)
-      }
-      
-      // If we have gas estimate but no balance, we can't check
-      if (!avaxBalance) {
-        return false
-      }
+    // Ensure we have fresh balance data
+    if (currentAccount) {
+      await checkAvaxBalance(currentAccount)
     }
     
-    // Convert both values to BigNumber for safe comparison
-    const estimatedCostWei = ethers.BigNumber.from(gasEstimate.totalWei)
-    const balanceWei = ethers.BigNumber.from(avaxBalance.wei)
+    if (!gasEstimate || !avaxBalance) {
+      console.warn('Cannot check balance sufficiency - missing data', { 
+        hasGasEstimate: !!gasEstimate, 
+        hasAvaxBalance: !!avaxBalance 
+      })
+      return false
+    }
     
-    // Add 10% buffer to estimated cost for safety
-    const estimatedWithBuffer = estimatedCostWei.mul(110).div(100)
-    
-    // Compare and set status
-    const isBalanceSufficient = balanceWei.gt(estimatedWithBuffer)
-    
-    setBalanceCheckStatus(isBalanceSufficient ? 'sufficient' : 'insufficient')
-    
-    return isBalanceSufficient
+    try {
+      console.log('Checking balance sufficiency:')
+      console.log('- Gas estimate:', gasEstimate)
+      console.log('- AVAX balance:', avaxBalance)
+      
+      // Convert both values to BigNumber for safe comparison
+      const estimatedCostWei = ethers.BigNumber.from(gasEstimate.totalWei)
+      const balanceWei = ethers.BigNumber.from(avaxBalance.wei)
+      
+      console.log('- Estimated cost (wei):', estimatedCostWei.toString())
+      console.log('- Balance (wei):', balanceWei.toString())
+      
+      // Add 10% buffer to estimated cost for safety
+      const estimatedWithBuffer = estimatedCostWei.mul(110).div(100)
+      console.log('- Estimated with 10% buffer (wei):', estimatedWithBuffer.toString())
+      
+      // Compare and set status
+      const isBalanceSufficient = balanceWei.gt(estimatedWithBuffer)
+      console.log('- Is balance sufficient?', isBalanceSufficient)
+      
+      setBalanceCheckStatus(isBalanceSufficient ? 'sufficient' : 'insufficient')
+      
+      return isBalanceSufficient
+    } catch (error) {
+      console.error('Error checking balance sufficiency:', error)
+      setBalanceCheckStatus('insufficient')
+      return false
+    }
   }
   
   // Get the appropriate explorer URL based on the network
@@ -776,10 +910,20 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
             <div className="font-mono text-gray-900">{parseInt(gasEstimate.gas).toLocaleString()} units</div>
             
             <div className="text-gray-700">Gas Price:</div>
-            <div className="font-mono text-gray-900">{parseFloat(gasEstimate.gasPrice).toFixed(2)} Gwei</div>
+            <div className="font-mono text-gray-900">
+              {/* Ensure gas price is displayed correctly and never shows as 0 */}
+              {Number(gasEstimate.gasPrice) > 0 
+                ? Number(gasEstimate.gasPrice).toFixed(2) 
+                : '25.00'} Gwei
+            </div>
             
             <div className="text-gray-700 font-medium">Total Cost:</div>
-            <div className="font-mono text-gray-900 font-medium">{parseFloat(gasEstimate.totalCost).toFixed(6)} AVAX</div>
+            <div className="font-mono text-gray-900 font-medium">
+              {/* Ensure cost is displayed correctly and never shows as 0 */}
+              {Number(gasEstimate.totalCost) > 0 
+                ? Number(gasEstimate.totalCost).toFixed(6) 
+                : (Number(gasEstimate.gas) * 25 * 1e-9).toFixed(6)} AVAX
+            </div>
             
             {/* Balance Comparison */}
             {avaxBalance && (
