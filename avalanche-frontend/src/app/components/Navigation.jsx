@@ -7,7 +7,8 @@ export default function Navigation() {
   
   const links = [
     { href: '/', label: 'Home' },
-    { href: '/contract-tester', label: 'Contract Tester' }
+    { href: '/contract-tester', label: 'Contract Tester' },
+    { href: '/gemini-processor', label: 'Gemini Processor' }
   ];
   
   return (

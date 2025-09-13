@@ -223,10 +223,18 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
+// Import the Gemini processor API routes
+const geminiProcessorRoutes = require('./routes/api-gemini-processor');
+
+// Use the routes
+app.use('/api/gemini', geminiProcessorRoutes);
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 API endpoints:`);
   console.log(`   POST http://localhost:${PORT}/api/generate`);
   console.log(`   POST http://localhost:${PORT}/api/explain`);
   console.log(`   POST http://localhost:${PORT}/api/deploy/compile`);
+  console.log(`   POST http://localhost:${PORT}/api/gemini/compile`);
+  console.log(`   POST http://localhost:${PORT}/api/gemini/fix`);
 });
