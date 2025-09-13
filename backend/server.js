@@ -175,7 +175,9 @@ ${contractCode}`;
 });
 
 // Import contract compiler
-const { compileContract, cleanSolidityCode } = require('./contractCompiler');
+// Import both compilers for backward compatibility
+const { cleanSolidityCode } = require('./contractCompiler');
+const { compileContractWithHardhat } = require('./hardhatCompiler');
 
 // Contract Deployment endpoint
 app.post('/api/deploy/compile', async (req, res) => {
@@ -186,16 +188,24 @@ app.post('/api/deploy/compile', async (req, res) => {
       return res.status(400).json({ error: 'Contract code is required' });
     }
 
-    console.log('Compiling contract...');
-    // Clean the contract code before compiling
-    const cleanedCode = cleanSolidityCode(contractCode);
-    const compiledContract = compileContract(cleanedCode);
+    console.log('Compiling contract with Hardhat...');
+    
+    // Use the new Hardhat compiler
+    const hardhatCompiler = require('./hardhatCompiler');
+    const compilationResult = await hardhatCompiler.compileContractWithHardhat(contractCode);
+    
+    if (!compilationResult.success) {
+      return res.status(400).json({ 
+        success: false,
+        error: compilationResult.error || 'Compilation failed'
+      });
+    }
 
-    console.log('Contract compiled successfully');
+    console.log('Contract compiled successfully with Hardhat');
     res.json({
       success: true,
-      abi: compiledContract.abi,
-      bytecode: compiledContract.bytecode
+      abi: compilationResult.abi,
+      bytecode: compilationResult.bytecode
     });
 
   } catch (error) {

@@ -1,6 +1,7 @@
 // deployContract.js - Example of deploying a contract that was auto-transformed
 
 import { ethers } from 'ethers';
+import { getProvider, requestAccounts } from './web3Utils';
 
 /**
  * Deploys a compiled smart contract
@@ -51,23 +52,29 @@ export async function deployExample(compiledContract) {
   // Example with MetaMask
   if (window.ethereum) {
     try {
-      // Request account access
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      // Request account access using our enhanced safe utility
+      const accountsResult = await requestAccounts();
+      if (!accountsResult.success) {
+        throw new Error(accountsResult.error || 'Failed to connect to MetaMask');
+      }
       
-      // Create a provider and signer
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      // Create a provider and signer using our safe utility
+      const provider = getProvider();
+      if (!provider) {
+        throw new Error('Failed to create web3 provider');
+      }
       const signer = provider.getSigner();
       
       // Deploy the contract
-      const result = await deployContract(compiledContract, [], signer);
+      const deployResult = await deployContract(compiledContract, [], signer);
       
-      if (result.success) {
-        console.log(`Contract deployed at: ${result.address}`);
-        console.log(`Transaction hash: ${result.transactionHash}`);
-        return result;
+      if (deployResult.success) {
+        console.log(`Contract deployed at: ${deployResult.address}`);
+        console.log(`Transaction hash: ${deployResult.transactionHash}`);
+        return deployResult;
       } else {
-        console.error('Deployment failed:', result.error);
-        throw new Error(result.error);
+        console.error('Deployment failed:', deployResult.error);
+        throw new Error(deployResult.error);
       }
     } catch (error) {
       console.error('Deployment error:', error);

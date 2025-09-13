@@ -3,6 +3,15 @@
 import { useState, useEffect } from 'react'
 import { Loader, AlertCircle, Check, ExternalLink } from 'lucide-react'
 import { ethers } from 'ethers'
+import { 
+  isMetaMaskAvailable, 
+  requestAccounts, 
+  getProvider, 
+  addMetaMaskListener, 
+  removeMetaMaskListener,
+  getAvaxBalance
+} from '../utils/web3Utils'
+import metamaskWrapper from '../utils/metamask-wrapper'
 
 export default function ContractDeployer({ contractCode, API_BASE_URL }) {
   const [network, setNetwork] = useState('fuji')
@@ -18,61 +27,98 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
   const [avaxBalance, setAvaxBalance] = useState(null) // User's AVAX balance
   const [balanceCheckStatus, setBalanceCheckStatus] = useState('idle') // idle, checking, sufficient, insufficient
 
-  // Check if MetaMask is installed and wallet is connected
+  // Check if MetaMask is installed and wallet is connected using our new approach
   useEffect(() => {
     const checkWalletConnection = async () => {
       try {
-        if (window.ethereum) {
-          const accounts = await window.ethereum.request({
-            method: 'eth_accounts'
-          })
-          if (accounts.length > 0) {
-            setCurrentAccount(accounts[0])
-            setWalletConnected(true)
+        if (isMetaMaskAvailable()) {
+          // Our wrapper will automatically check accounts without prompting
+          if (metamaskWrapper) {
+            // Force an immediate state update
+            await metamaskWrapper.updateState();
             
-            // Check the user's AVAX balance
-            await checkAvaxBalance(accounts[0])
+            // Get the current state
+            const currentAccounts = metamaskWrapper.accounts;
+            
+            if (currentAccounts && currentAccounts.length > 0) {
+              setCurrentAccount(currentAccounts[0]);
+              setWalletConnected(true);
+              
+              // Check the user's AVAX balance
+              try {
+                const balance = await getAvaxBalance(currentAccounts[0]);
+                if (balance) {
+                  setAvaxBalance(balance);
+                }
+              } catch (balanceError) {
+                console.warn('Non-critical error checking balance:', balanceError);
+              }
+            }
           }
           
-          // Set up event listeners for account and chain changes
-          window.ethereum.on('accountsChanged', handleAccountsChanged)
-          window.ethereum.on('chainChanged', handleChainChanged)
+          // Use our completely reworked event handling system
+          addMetaMaskListener('accountsChanged', handleAccountsChanged);
+          addMetaMaskListener('chainChanged', handleChainChanged);
         }
       } catch (error) {
-        console.error('Error checking wallet connection:', error)
+        console.error('Error checking wallet connection:', error);
       }
-    }
+    };
     
-    checkWalletConnection()
+    // Delay the check to ensure everything is loaded
+    setTimeout(checkWalletConnection, 1000);
     
-    // Clean up event listeners
+    // Clean up listeners when component unmounts
     return () => {
-      if (window.ethereum) {
-        window.ethereum.removeListener('accountsChanged', handleAccountsChanged)
-        window.ethereum.removeListener('chainChanged', handleChainChanged)
-      }
-    }
+      removeMetaMaskListener('accountsChanged', handleAccountsChanged);
+      removeMetaMaskListener('chainChanged', handleChainChanged);
+    };
   }, [])
   
-  // Handle account changes
+  // Handle account changes using our new wrapper approach
   const handleAccountsChanged = async (accounts) => {
-    if (accounts.length === 0) {
-      // User disconnected wallet
-      setWalletConnected(false)
-      setCurrentAccount('')
-      setAvaxBalance(null)
-    } else if (accounts[0] !== currentAccount) {
-      // Account changed
-      setCurrentAccount(accounts[0])
-      await checkAvaxBalance(accounts[0])
+    try {
+      console.log('Accounts changed:', accounts);
+      
+      if (!accounts || accounts.length === 0) {
+        // User disconnected wallet
+        setWalletConnected(false)
+        setCurrentAccount('')
+        setAvaxBalance(null)
+        setError('Wallet disconnected. Please reconnect to deploy contracts.')
+      } else if (accounts[0] !== currentAccount) {
+        // Account changed
+        setCurrentAccount(accounts[0])
+        try {
+          const balance = await getAvaxBalance(accounts[0])
+          if (balance) {
+            setAvaxBalance(balance)
+          }
+        } catch (error) {
+          console.warn('Error fetching balance after account change:', error)
+        }
+      }
+    } catch (error) {
+      console.error('Error handling account change:', error)
     }
   }
   
-  // Handle chain changes
-  const handleChainChanged = async () => {
-    // When chain changes, refresh page to ensure consistent state
-    // This is recommended by MetaMask
-    window.location.reload()
+  // Handle chain changes with more error handling
+  const handleChainChanged = async (chainId) => {
+    try {
+      console.log('Chain changed:', chainId);
+      
+      // Show a message before reloading
+      setError('Network changed. Refreshing page...')
+      
+      // Small delay before reload to show the message
+      setTimeout(() => {
+        // When chain changes, refresh page to ensure consistent state
+        window.location.reload()
+      }, 1500)
+    } catch (error) {
+      console.error('Error handling chain change:', error)
+    }
   }
   
   // Fetch and check the user's AVAX balance
@@ -82,27 +128,17 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
     try {
       setBalanceCheckStatus('checking')
       
-      // Initialize provider
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
+      // Use our utility function to get balance
+      const balance = await getAvaxBalance(account)
       
-      // Get balance in wei
-      const balanceWei = await provider.getBalance(account)
-      
-      // Convert wei to AVAX
-      const balanceAvax = ethers.utils.formatEther(balanceWei)
-      
-      setAvaxBalance({
-        wei: balanceWei.toString(),
-        avax: balanceAvax
-      })
+      if (balance) {
+        setAvaxBalance(balance)
+      }
       
       setBalanceCheckStatus('idle')
       
       // Return the balance for use in other functions
-      return {
-        wei: balanceWei,
-        avax: balanceAvax
-      }
+      return balance
     } catch (error) {
       console.error('Error checking AVAX balance:', error)
       setBalanceCheckStatus('idle')
@@ -110,30 +146,69 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
     }
   }
 
-  // Connect to MetaMask wallet
+  // Connect to MetaMask wallet using our completely new approach
   const connectWallet = async () => {
     try {
-      if (!window.ethereum) {
+      if (!isMetaMaskAvailable()) {
         setError('MetaMask is not installed. Please install MetaMask to deploy contracts.')
         return
       }
 
       setError('')
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts'
-      })
+      setDeploymentStatus('idle')
+      
+      // Show connecting status to the user
+      const connectingStatus = document.getElementById('connecting-status')
+      if (connectingStatus) {
+        connectingStatus.textContent = 'Connecting to MetaMask...'
+      }
+      
+      // Use our completely redesigned approach for requesting accounts
+      const result = await requestAccounts()
+      
+      if (!result.success) {
+        setError(result.error || 'Failed to connect to MetaMask')
+        if (connectingStatus) {
+          connectingStatus.textContent = 'Connection failed'
+        }
+        return
+      }
+      
+      const accounts = result.accounts
+      if (accounts.length === 0) {
+        setError('No accounts found in MetaMask. Please create an account or unlock your wallet.')
+        return
+      }
       
       setCurrentAccount(accounts[0])
       setWalletConnected(true)
       
-      // Check AVAX balance
-      await checkAvaxBalance(accounts[0])
+      // Show success message
+      if (connectingStatus) {
+        connectingStatus.textContent = 'Connected!'
+      }
+      
+      // Get AVAX balance using our utility
+      try {
+        const balance = await getAvaxBalance(accounts[0])
+        if (balance) {
+          setAvaxBalance(balance)
+        }
+      } catch (balanceError) {
+        console.warn('Non-critical error getting balance:', balanceError)
+        // Continue anyway - balance is not critical
+      }
       
       // Check if we're on the right network
-      await checkAndSwitchNetwork()
+      try {
+        await checkAndSwitchNetwork()
+      } catch (networkError) {
+        console.warn('Error switching network:', networkError)
+        // Continue anyway - we'll handle network issues later
+      }
     } catch (error) {
       console.error('Error connecting to wallet:', error)
-      setError(`Failed to connect wallet: ${error.message}`)
+      setError(`Failed to connect wallet: ${error.message || 'Unknown error'}`)
     }
   }
 
@@ -300,7 +375,12 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
       setError('')
       
       // Initialize ethers.js provider and signer
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
+      const provider = getProvider()
+      if (!provider) {
+        setError('Failed to create provider. Please refresh the page and try again.')
+        setDeploymentStatus('error')
+        return null
+      }
       const signer = provider.getSigner()
       
       // Create a contract factory for estimation
@@ -393,7 +473,12 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
       setDeploymentStatus('deploying')
       
       // Initialize ethers.js provider and signer
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
+      const provider = getProvider()
+      if (!provider) {
+        setError('Failed to create provider. Please refresh the page and try again.')
+        setDeploymentStatus('error')
+        return
+      }
       const signer = provider.getSigner()
       
       // Create a contract factory for deployment
@@ -546,12 +631,18 @@ export default function ContractDeployer({ contractCode, API_BASE_URL }) {
       
       {/* Wallet Connection */}
       {!walletConnected ? (
-        <button
-          onClick={connectWallet}
-          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-        >
-          Connect MetaMask
-        </button>
+        <div className="space-y-2">
+          <button
+            onClick={connectWallet}
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          >
+            Connect MetaMask
+          </button>
+          <div 
+            id="connecting-status" 
+            className="text-center text-sm text-gray-600 h-5"
+          ></div>
+        </div>
       ) : (
         <div className="space-y-2">
           <div className="flex items-center space-x-2 text-sm">
